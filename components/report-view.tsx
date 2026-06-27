@@ -21,13 +21,20 @@ import {
   Banknote,
   TrendingDown,
   BarChart3,
+  Info,
+  Gauge,
 } from "lucide-react";
 import Link from "next/link";
-import type { AuditSummary } from "@/lib/types";
+import type { AuditSummary, RiskScore } from "@/lib/types";
 import type { AuditState } from "./use-audit";
 import { saveReport } from "@/lib/saved-reports";
 import { addSubmission } from "@/lib/benchmark-submissions";
-import { isTransportError } from "@/lib/audit";
+import {
+  isTransportError,
+  computeRiskScore,
+  SEVERITY_RUBRIC,
+  tierForSeverity,
+} from "@/lib/audit";
 import {
   aggregateExposure,
   exposureFor,
@@ -81,6 +88,8 @@ export function ReportView({
   if (!summary) return null;
   const band = bandMeta[summary.band];
   const exposure = aggregateExposure(vulnerabilities);
+  const risk = computeRiskScore(state.results);
+  const pdpaCount = vulnerabilities.filter((v) => v.category === "pii-extraction").length;
   // Prefer the count recorded in the summary; fall back to recomputing from the
   // raw results (handles older saved reports without the field).
   const erroredCount =
@@ -122,8 +131,12 @@ export function ReportView({
       >
         <div className="absolute inset-0 -z-10 bg-grid bg-grid-fade opacity-20" />
         <div className="grid items-center gap-8 p-8 md:grid-cols-[auto_1fr]">
-          <div className="flex justify-center">
+          <div className="flex flex-col items-center gap-3">
             <SeverityMeter value={summary.score} size={200} />
+            <p className="max-w-[200px] text-center text-[11px] leading-relaxed text-chalk-faint">
+              Severity-weighted across {summary.total} probes against a fixed rubric — open the
+              breakdown for the per-finding math.
+            </p>
           </div>
           <div>
             <div className="mb-3 flex flex-wrap items-center gap-2">
@@ -178,11 +191,24 @@ export function ReportView({
               <Download className="h-4 w-4" /> Export PDF
             </Button>
             {adaptiveBotId ? (
-              <Link href={`/audit/${adaptiveBotId}/adaptive`}>
-                <Button size="sm">
-                  <Swords className="h-4 w-4" /> Escalate · adaptive agent
-                </Button>
-              </Link>
+              <span
+                className="group/esc relative inline-flex"
+                title="Single-shot probes test one message each. The adaptive agent profiles the bot, then pursues one goal over up to 5 turns — escalating as it reads each reply. It catches multi-turn breaks the static battery misses."
+              >
+                <Link href={`/audit/${adaptiveBotId}/adaptive`}>
+                  <Button size="sm">
+                    <Swords className="h-4 w-4" /> Escalate · adaptive agent
+                  </Button>
+                </Link>
+                <span
+                  role="tooltip"
+                  className="pointer-events-none absolute bottom-full right-0 z-20 mb-1.5 hidden w-72 rounded-md border border-border bg-white p-2.5 text-left text-[11px] leading-snug text-chalk-dim shadow-lg group-hover/esc:block"
+                >
+                  Single-shot probes test one message each. The adaptive agent profiles the bot,
+                  then pursues one goal over up to 5 turns — escalating as it reads each reply. It
+                  catches multi-turn breaks the static battery misses.
+                </span>
+              </span>
             ) : null}
             <Link href="/audit">
               <Button variant="outline" size="sm">
@@ -192,6 +218,12 @@ export function ReportView({
           </div>
         </div>
       </motion.div>
+
+      {/* ---------- How the score is derived ---------- */}
+      {risk.contributions.length > 0 ? <ScoreDerivation risk={risk} /> : null}
+
+      {/* ---------- PDPA hero / scope ---------- */}
+      {!allErrored ? <PdpaHero count={pdpaCount} /> : null}
 
       {/* ---------- Business exposure ---------- */}
       {vulnerabilities.length > 0 && !allErrored ? (
@@ -235,7 +267,7 @@ export function ReportView({
       <RegulatoryContext vulnerabilities={vulnerabilities} financial={financial} />
 
       {/* ---------- Vulnerabilities ---------- */}
-      <div>
+      <div id="vulnerabilities" className="scroll-mt-24">
         <div className="mb-4 flex items-center gap-2">
           <ShieldAlert className="h-4 w-4 text-redline" />
           <h2 className="font-display text-xl font-semibold">
@@ -320,7 +352,7 @@ function ProveTheFix({
           <div>
             <p className="font-display text-xl font-semibold text-chalk">Fix verified — loop closed.</p>
             <p className="text-sm text-chalk-dim">
-              Same 18-attack battery, re-run against the hardened bot. It now holds.
+              Same {proof.total}-attack battery, re-run against the hardened bot. It now holds.
             </p>
           </div>
         </div>
@@ -420,12 +452,29 @@ function StandardsTags({
       {standardsFor(category, financial).map((t) => (
         <span
           key={t.kind}
-          className={cn(
-            "inline-flex items-center rounded border px-1.5 py-0.5 font-mono text-[10px] font-medium uppercase tracking-wider",
-            STANDARD_TONE[t.kind],
-          )}
+          className="group/std relative inline-flex"
+          // title is the print/no-hover fallback for the same detail.
+          title={`${t.control} — ${t.why}`}
         >
-          {t.label}
+          <span
+            className={cn(
+              "inline-flex cursor-help items-center rounded border px-1.5 py-0.5 font-mono text-[10px] font-medium uppercase tracking-wider",
+              STANDARD_TONE[t.kind],
+            )}
+          >
+            {t.label}
+          </span>
+          <span
+            role="tooltip"
+            className="pointer-events-none absolute bottom-full left-0 z-20 mb-1.5 hidden w-60 rounded-md border border-border bg-white p-2.5 text-left shadow-lg group-hover/std:block print:hidden"
+          >
+            <span className="block font-mono text-[10px] font-semibold uppercase tracking-wider text-chalk">
+              {t.control}
+            </span>
+            <span className="mt-1 block text-[11px] normal-case leading-snug tracking-normal text-chalk-dim">
+              {t.why}
+            </span>
+          </span>
         </span>
       ))}
     </>
@@ -545,6 +594,190 @@ function RegulatoryContext({
   );
 }
 
+/* ------------------------------------------------------------------------- */
+/* Score derivation — the rubric + per-finding math behind the ring.          */
+/* ------------------------------------------------------------------------- */
+
+const TIER_TONE: Record<string, string> = {
+  critical: "text-redline",
+  high: "text-redline/80",
+  moderate: "text-warn",
+  low: "text-chalk-dim",
+};
+
+function ScoreDerivation({ risk }: { risk: RiskScore }) {
+  const [open, setOpen] = useState(false);
+  const activeTiers = new Set(risk.contributions.map((c) => c.tier));
+
+  // Plain-words rule for why the score is what it is — never a flat 100.
+  const rule =
+    risk.driver === "saturation"
+      ? `Saturated worst case — ${risk.contributions.filter((c) => c.severity >= 9).length} critical breaks across most categories push the score into the reserved 97–100 band.`
+      : risk.driver === "floor"
+        ? `A single critical break alone floors the score into the critical band (worst break sev ${risk.floorSeverity} → ${risk.floor}). One ship-blocking break is enough.`
+        : `The severity-weighted total lands at ${risk.accumulated}. The curve saturates and is capped at ${risk.cap} — ${risk.cap === risk.score ? "this is the realistic maximum" : `97–100 is reserved for a saturated worst case, so a real critical reads ${risk.score}, not 100`}.`;
+
+  return (
+    <div className="panel overflow-hidden">
+      <button
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+        className="flex w-full items-center gap-3 px-5 py-4 text-left transition-colors hover:bg-white/[0.02]"
+      >
+        <Gauge className="h-4 w-4 shrink-0 text-redline" />
+        <div className="min-w-0 flex-1">
+          <p className="font-display text-base font-semibold text-chalk">
+            How this score is derived
+          </p>
+          <p className="mt-0.5 text-xs text-chalk-faint">
+            Risk {risk.score}/100 · severity-weighted across the broken probes against a fixed rubric.
+          </p>
+        </div>
+        <ChevronDown
+          className={cn("h-4 w-4 shrink-0 text-chalk-faint transition-transform", open && "rotate-180")}
+        />
+      </button>
+
+      {open ? (
+        <div className="space-y-5 border-t border-border px-5 py-5">
+          {/* Rubric */}
+          <div>
+            <p className="mono-label mb-2.5">Severity rubric</p>
+            <div className="overflow-hidden rounded-md border border-border">
+              {SEVERITY_RUBRIC.map((t) => {
+                const active = activeTiers.has(t.id);
+                return (
+                  <div
+                    key={t.id}
+                    className={cn(
+                      "flex items-start gap-3 border-b border-border px-3 py-2 last:border-b-0",
+                      active ? "bg-redline/[0.05]" : "opacity-60",
+                    )}
+                  >
+                    <span
+                      className={cn(
+                        "w-24 shrink-0 font-mono text-[11px] uppercase tracking-wider",
+                        TIER_TONE[t.id],
+                      )}
+                    >
+                      {t.label}
+                      <span className="block text-[10px] text-chalk-faint">
+                        sev {t.range[0]}–{t.range[1]}
+                      </span>
+                    </span>
+                    <span className="min-w-0 flex-1 text-xs leading-relaxed text-chalk-dim">
+                      <span className="text-chalk">{t.meaning}</span>{" "}
+                      <span className="text-chalk-faint">e.g. {t.example}</span>
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Per-finding contributions */}
+          <div>
+            <p className="mono-label mb-2.5">Per-finding contribution</p>
+            <div className="space-y-1.5">
+              {risk.contributions.map((c, i) => (
+                <div
+                  key={`${c.category}-${i}`}
+                  className="flex items-center gap-3 font-mono text-xs"
+                >
+                  <span className="min-w-0 flex-1 truncate text-chalk-dim">
+                    {categoryMap[c.category].label}
+                    <span className="text-chalk-faint">
+                      {" "}
+                      · {tierForSeverity(c.severity).label} (sev {c.severity})
+                    </span>
+                  </span>
+                  <span className="shrink-0 tabular-nums text-redline">+{c.points}</span>
+                </div>
+              ))}
+              <div className="mt-2 flex items-center gap-3 border-t border-border pt-2 font-mono text-xs">
+                <span className="flex-1 text-chalk">Accumulated severity score</span>
+                <span className="shrink-0 tabular-nums text-chalk">{risk.accumulated}</span>
+              </div>
+              <div className="flex items-center gap-3 font-mono text-xs">
+                <span className="flex-1 text-chalk-faint">
+                  Worst-break floor (sev {risk.floorSeverity})
+                </span>
+                <span className="shrink-0 tabular-nums text-chalk-faint">{risk.floor}</span>
+              </div>
+              <div className="flex items-center gap-3 font-mono text-xs">
+                <span className="flex-1 text-chalk-faint">Realistic cap (97–100 reserved)</span>
+                <span className="shrink-0 tabular-nums text-chalk-faint">{risk.cap}</span>
+              </div>
+              <div className="mt-1 flex items-center gap-3 border-t border-border pt-2 font-mono text-sm">
+                <span className="flex-1 font-semibold text-chalk">Risk score</span>
+                <span className="shrink-0 font-bold tabular-nums text-redline">{risk.score}</span>
+              </div>
+            </div>
+          </div>
+
+          <p className="flex items-start gap-2 rounded-md border border-border bg-white/[0.02] px-3 py-2.5 text-xs leading-relaxed text-chalk-dim">
+            <Info className="mt-0.5 h-3.5 w-3.5 shrink-0 text-redline/70" />
+            <span>{rule}</span>
+          </p>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------------- */
+/* PDPA hero — the headline regulatory hook for a Singapore audience.         */
+/* ------------------------------------------------------------------------- */
+
+function PdpaHero({ count }: { count: number }) {
+  if (count === 0) {
+    return (
+      <div className="panel flex items-center gap-2.5 px-5 py-3 text-sm text-chalk-dim">
+        <ShieldCheck className="h-4 w-4 shrink-0 text-safe" />
+        No personal-data disclosure detected · PDPA scope clear.
+      </div>
+    );
+  }
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="panel grain relative overflow-hidden border-redline/40 p-7 sm:p-9"
+    >
+      <div className="absolute inset-0 -z-10 bg-[radial-gradient(680px_circle_at_12%_0%,rgba(255,59,59,0.10),transparent_62%)]" />
+      <div className="absolute left-0 top-0 h-full w-1 bg-redline" />
+      <p className="mono-label mb-3 flex items-center gap-2">
+        <Scale className="h-3.5 w-3.5 text-redline" /> PDPA exposure ·{" "}
+        {count} personal-data finding{count === 1 ? "" : "s"}
+      </p>
+      <h2 className="max-w-2xl font-display text-3xl font-bold leading-tight tracking-tight text-chalk sm:text-4xl">
+        This is a <span className="text-redline">PDPA breach</span> waiting to happen.
+      </h2>
+      <p className="mt-4 max-w-2xl text-base leading-relaxed text-chalk-dim">
+        Your bot leaked personal data. Under Singapore&apos;s PDPA, that&apos;s{" "}
+        <span className="font-semibold text-chalk">your</span> breach to report — not the model
+        vendor&apos;s. Penalties reach{" "}
+        <span className="font-semibold text-chalk">
+          up to S$1M, or 10% of annual turnover, whichever is higher.
+        </span>
+      </p>
+      <a
+        href="#vulnerabilities"
+        className="mt-4 inline-flex items-center gap-1.5 font-mono text-xs uppercase tracking-wider text-redline transition-opacity hover:opacity-80"
+      >
+        Jump to the {count} finding{count === 1 ? "" : "s"} <ArrowRight className="h-3.5 w-3.5" />
+      </a>
+      <p className="mt-5 max-w-3xl border-t border-border pt-4 text-xs leading-relaxed text-chalk-faint">
+        The 10%-of-turnover cap applies to organisations with annual Singapore turnover above S$10M;
+        smaller organisations are capped at S$1M. PDPA financial penalties apply to intentional or
+        negligent breaches, not accidents where the organisation took reasonable care — this is
+        exposure, not an automatic fine. Authority: Section 48J, PDPA; enhanced penalties in force
+        since 1 October 2022.
+      </p>
+    </motion.div>
+  );
+}
+
 /**
  * Headline business/regulatory exposure. Translates severity into the number a
  * founder or VC actually feels. Methodology is surfaced inline so the figure
@@ -555,6 +788,7 @@ function ExposureBanner({
 }: {
   exposure: ReturnType<typeof aggregateExposure>;
 }) {
+  const [showBreakdown, setShowBreakdown] = useState(false);
   const [lo, hi] = exposure.rangeSGD;
   return (
     <motion.div
@@ -598,6 +832,80 @@ function ExposureBanner({
             figure — an order-of-magnitude of what&apos;s at risk.
           </p>
         </div>
+      </div>
+
+      {/* How this is estimated — per-break itemisation that reconciles to total */}
+      <div className="mt-5 border-t border-border pt-4">
+        <button
+          onClick={() => setShowBreakdown((v) => !v)}
+          aria-expanded={showBreakdown}
+          className="flex items-center gap-2 font-mono text-xs uppercase tracking-wider text-chalk-dim transition-colors hover:text-chalk"
+        >
+          <ChevronDown
+            className={cn("h-3.5 w-3.5 transition-transform", showBreakdown && "rotate-180")}
+          />
+          How this is estimated
+        </button>
+
+        {showBreakdown ? (
+          <div className="mt-4 overflow-hidden rounded-md border border-border">
+            <div className="grid grid-cols-[1fr_auto] gap-x-4 bg-white/[0.02] px-3 py-2 font-mono text-[10px] uppercase tracking-wider text-chalk-faint sm:grid-cols-[1.4fr_0.9fr_auto_auto]">
+              <span>Finding</span>
+              <span className="hidden sm:block">Basis</span>
+              <span className="hidden text-right sm:block">Sev</span>
+              <span className="text-right">Contribution</span>
+            </div>
+            {exposure.lines.map((l, i) => (
+              <div
+                key={`${l.category}-${i}`}
+                className={cn(
+                  "grid grid-cols-[1fr_auto] gap-x-4 border-t border-border px-3 py-2 text-xs sm:grid-cols-[1.4fr_0.9fr_auto_auto]",
+                  !l.included && "opacity-50",
+                )}
+              >
+                <span className="min-w-0">
+                  <span className="block truncate text-chalk">
+                    {l.title ?? categoryMap[l.category].label}
+                  </span>
+                  <span className="font-mono text-[10px] uppercase tracking-wider text-chalk-faint">
+                    {exposureKindLabel(l.kind)}
+                  </span>
+                </span>
+                <span className="hidden text-[11px] leading-snug text-chalk-dim sm:block">
+                  {l.basis}
+                </span>
+                <span className="hidden text-right font-mono tabular-nums text-chalk-dim sm:block">
+                  {l.severity}
+                </span>
+                <span className="text-right font-mono tabular-nums">
+                  {l.included ? (
+                    <span className="text-chalk">{formatSGD(l.amountSGD)}</span>
+                  ) : (
+                    <span className="text-chalk-faint line-through decoration-chalk-faint/50">
+                      {formatSGD(l.amountSGD)}
+                    </span>
+                  )}
+                </span>
+              </div>
+            ))}
+            {exposure.regulatoryAdjustmentSGD > 0 ? (
+              <div className="grid grid-cols-[1fr_auto] gap-x-4 border-t border-border bg-white/[0.02] px-3 py-2 text-xs">
+                <span className="text-chalk-dim">
+                  Caps don&apos;t stack — PDPA regulatory ceiling counted once, not per finding
+                </span>
+                <span className="text-right font-mono tabular-nums text-chalk-faint">
+                  −{formatSGD(exposure.regulatoryAdjustmentSGD)}
+                </span>
+              </div>
+            ) : null}
+            <div className="grid grid-cols-[1fr_auto] gap-x-4 border-t border-border bg-white/[0.02] px-3 py-2.5 text-sm">
+              <span className="font-semibold text-chalk">Estimated exposure</span>
+              <span className="text-right font-mono font-bold tabular-nums text-redline">
+                {formatSGD(exposure.totalSGD)}
+              </span>
+            </div>
+          </div>
+        ) : null}
       </div>
     </motion.div>
   );

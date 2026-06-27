@@ -65,7 +65,9 @@ export function AdaptiveExperience({
   // Live business exposure — same model as the static report, fed by the goals
   // the agent has achieved so far (each broken campaign carries category + sev).
   const exposure = aggregateExposure(
-    state.campaigns.filter((c) => c.broken).map((c) => ({ category: c.category, severity: c.severity })),
+    state.campaigns
+      .filter((c) => c.broken)
+      .map((c) => ({ category: c.category, severity: c.severity, title: c.title })),
   );
 
   // Smooth auto-scroll: follow the action as the agent streams new turns. We
@@ -321,7 +323,7 @@ function AdaptivePrintReport({
   const ran = campaigns.filter((c) => c.turns.length > 0);
   const broken = ran.filter((c) => c.broken);
   const exposure = aggregateExposure(
-    broken.map((c) => ({ category: c.category, severity: c.severity })),
+    broken.map((c) => ({ category: c.category, severity: c.severity, title: c.title })),
   );
   // MAS named risk only for financial institutions (FIs); OWASP always.
   const tag = (c: AdaptiveCampaign) => {
@@ -460,6 +462,8 @@ function ReconCard({ recon }: { recon: TargetProfile }) {
 }
 
 function CampaignBlock({ campaign }: { campaign: AdaptiveCampaign }) {
+  // The turn the bot actually broke on (the agent stops escalating once it lands).
+  const breakTurn = campaign.turns.find((t) => t.verdict.broken)?.index;
   return (
     <CampaignShell
       title={campaign.title}
@@ -468,8 +472,8 @@ function CampaignBlock({ campaign }: { campaign: AdaptiveCampaign }) {
       verdict={
         campaign.broken ? (
           <span className="inline-flex items-center gap-1.5 rounded-full bg-redline px-2.5 py-1 font-mono text-[10px] font-bold uppercase tracking-wider text-white shadow-[0_0_18px_-2px_rgba(255,59,59,0.7)]">
-            <ShieldAlert className="h-3.5 w-3.5" /> Broken · {campaign.turnsUsed} turn
-            {campaign.turnsUsed === 1 ? "" : "s"} · sev {campaign.severity}
+            <ShieldAlert className="h-3.5 w-3.5" /> Broke on turn{" "}
+            {breakTurn != null ? breakTurn + 1 : campaign.turnsUsed} · sev {campaign.severity}
           </span>
         ) : (
           <span className="inline-flex items-center gap-1.5 rounded-full border border-safe/40 bg-safe/10 px-2.5 py-1 font-mono text-[10px] font-bold uppercase tracking-wider text-safe">

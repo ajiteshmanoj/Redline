@@ -121,12 +121,13 @@ Single source of truth, scoped accurately so a regulator-adjacent audience can't
 
 ## Data Model
 
-No database. Types in `lib/types.ts`: `Attack`, `AttackCategory` (+ `owaspId`, `masRisk`), `AttackResult`, `JudgeVerdict`, `Vulnerability`, `Exposure`/`ExposureSummary`, `Bot` (+ `independent`, `financial`, `httpTarget`), `AuditSummary` (+ optional `errored`), `HttpTargetConfig` (+ session threading), and the adaptive set (`AdaptiveGoal`, `AdaptiveTurn`, `AdaptiveCampaign`, `AdaptiveSummary`, `AdaptiveEvent`). Watch/benchmark types live in `lib/watch.ts` and `lib/benchmark.ts`. Severity bands: secure (0–14), low (15–34), moderate (35–59), high (60–79), critical (80+).
+No database. Types in `lib/types.ts`: `Attack`, `AttackCategory` (+ `owaspId`, `masRisk`), `AttackResult`, `JudgeVerdict`, `Vulnerability`, `Exposure`/`ExposureSummary`, `Bot` (+ `independent`, `financial`, `httpTarget`), `AuditSummary` (+ optional `errored`), `HttpTargetConfig` (+ session threading), and the adaptive set (`AdaptiveGoal`, `AdaptiveTurn`, `AdaptiveCampaign`, `AdaptiveSummary`, `AdaptiveEvent`). Watch/benchmark types live in `lib/watch.ts` and `lib/benchmark.ts`. Severity bands: secure (0–14), low (15–34), moderate (35–59), high (60–79), critical (80–96), catastrophic (97–100).
 
 ## Demo vs. Live
 
 - **Demo** (`DEMO_MODE=true`, default): pre-scripted/captured fixtures, **zero network calls**, repeatable. Built-in bots only. Watch and Benchmark run on seeded data.
-- **Live**: real LLM calls; external HTTP targets always run live (ignore DEMO_MODE).
+- **Live**: real LLM calls; external HTTP targets and user-supplied prompts (paste / GitHub) always run live (ignore DEMO_MODE).
+- **Production** (`redline-woad.vercel.app`): the `LLM_*` keys are set on Vercel, so self-serve audits run live on the deployed URL; the built-in demo bots stay network-free.
 
 ## Build & Run
 
@@ -149,7 +150,8 @@ Env: `DEMO_MODE`, `LLM_API_KEY`, `LLM_BASE_URL`, `LLM_MODEL` (+ optional per-rol
 - ✅ **Fix → re-audit climax** — score *and* exposure collapse, live
 - ✅ Adaptive multi-turn agent — built-in + live HTTP targets, smooth auto-scroll, live exposure
 - ✅ **Redline Watch** — monitoring dashboard, sparklines, regression alert, CI snippet
-- ✅ **Benchmark** — State of AI Agent Security 2026 (build-pattern archetypes, A–F)
+- ✅ **Benchmark** — State of AI Agent Security 2026 (build-pattern archetypes, A–F), **fed by real audits** you submit ("Add to benchmark" → "Your audits")
+- ✅ **Audit your own bot** — paste a system prompt, connect a public GitHub repo (`/api/extract-prompt` finds the prompt), or an HTTP endpoint; all run the real battery live
 - ✅ **Engine section** — attacker/judge/target, separate-judge design, provider-agnostic
 - ✅ Accurate standards mapping — OWASP (all) + PDPA (data) + MAS (proposed, FI-only), text badges + non-affiliation disclaimer
 - ✅ Honesty layer — independent control bot, reachability guard, varied transcripts

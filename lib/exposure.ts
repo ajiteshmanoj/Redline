@@ -2,9 +2,11 @@ import type {
   AttackCategoryId,
   Exposure,
   ExposureKind,
+  ExposureLineItem,
   ExposureSummary,
   Vulnerability,
 } from "./types";
+import { reconcile } from "./utils";
 
 // ===========================================================================
 // Exposure model — turns a confirmed break into the language a founder or VC
@@ -94,8 +96,8 @@ export function exposureFor(category: AttackCategoryId, severity: number): Expos
 
 // Only category + severity drive exposure, so callers can pass either full
 // Vulnerability objects (static report) or lightweight {category, severity}
-// pairs (adaptive campaigns).
-export type ExposureInput = Pick<Vulnerability, "category" | "severity">;
+// pairs (adaptive campaigns). `title` is optional, surfaced in the breakdown.
+export type ExposureInput = Pick<Vulnerability, "category" | "severity"> & { title?: string };
 
 /**
  * Aggregate exposure across all confirmed breaks.
@@ -106,35 +108,68 @@ export type ExposureInput = Pick<Vulnerability, "category" | "severity">;
  */
 export function aggregateExposure(vulns: ExposureInput[]): ExposureSummary {
   if (vulns.length === 0) {
-    return { totalSGD: 0, rangeSGD: [0, 0], topBasis: "", drivers: [] };
+    return {
+      totalSGD: 0,
+      rangeSGD: [0, 0],
+      topBasis: "",
+      drivers: [],
+      lines: [],
+      naiveTotalSGD: 0,
+      regulatoryAdjustmentSGD: 0,
+    };
   }
 
-  const lines = vulns.map((v) => ({ v, e: exposureFor(v.category, v.severity) }));
+  const computed = vulns.map((v) => ({ v, e: exposureFor(v.category, v.severity) }));
 
-  const regulatory = lines.filter((l) => l.e.kind === "regulatory");
-  const rest = lines.filter((l) => l.e.kind !== "regulatory");
-
-  // Largest single regulatory line (caps don't stack).
+  // Regulatory caps don't stack — exactly one regulatory line counts (the
+  // largest); the rest are dropped from the total but kept in the breakdown.
+  const regulatory = computed.filter((l) => l.e.kind === "regulatory");
   const topRegulatory =
     regulatory.length > 0
       ? regulatory.reduce((a, b) => (b.e.amountSGD > a.e.amountSGD ? b : a))
       : null;
 
-  const summable = [...rest, ...(topRegulatory ? [topRegulatory] : [])];
+  // Per-break itemisation, sorted by contribution (biggest first), marking the
+  // dropped regulatory lines so the "caps don't stack" adjustment is visible.
+  const lines: ExposureLineItem[] = computed
+    .map((l) => ({
+      category: l.v.category,
+      title: l.v.title,
+      severity: l.v.severity,
+      kind: l.e.kind,
+      basis: l.e.basis,
+      amountSGD: l.e.amountSGD,
+      rangeSGD: l.e.rangeSGD,
+      included: l.e.kind !== "regulatory" || l === topRegulatory,
+    }))
+    .sort((a, b) => b.amountSGD - a.amountSGD);
 
-  const totalSGD = summable.reduce((acc, l) => acc + l.e.amountSGD, 0);
-  const low = summable.reduce((acc, l) => acc + l.e.rangeSGD[0], 0);
-  const high = summable.reduce((acc, l) => acc + l.e.rangeSGD[1], 0);
+  const included = lines.filter((l) => l.included);
+  const totalSGD = included.reduce((acc, l) => acc + l.amountSGD, 0);
+  const low = included.reduce((acc, l) => acc + l.rangeSGD[0], 0);
+  const high = included.reduce((acc, l) => acc + l.rangeSGD[1], 0);
+
+  const naiveTotalSGD = lines.reduce((acc, l) => acc + l.amountSGD, 0);
+  const regulatoryAdjustmentSGD = naiveTotalSGD - totalSGD;
 
   // The biggest single line drives the headline ("driven by …").
-  const top = lines.reduce((a, b) => (b.e.amountSGD > a.e.amountSGD ? b : a));
-  const drivers = Array.from(new Set(lines.map((l) => l.e.kind)));
+  const top = computed.reduce((a, b) => (b.e.amountSGD > a.e.amountSGD ? b : a));
+  const drivers = Array.from(new Set(included.map((l) => l.kind)));
+
+  // The breakdown must round-trip to the headline.
+  reconcile(
+    naiveTotalSGD - regulatoryAdjustmentSGD === totalSGD,
+    "exposure lines must reconcile to total after the caps-don't-stack adjustment",
+  );
 
   return {
     totalSGD,
     rangeSGD: [low, high],
     topBasis: top.e.basis,
     drivers,
+    lines,
+    naiveTotalSGD,
+    regulatoryAdjustmentSGD,
   };
 }
 

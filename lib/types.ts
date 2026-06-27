@@ -85,9 +85,24 @@ export type Exposure = {
   rangeSGD: [number, number];
 };
 
+// One break's contribution to the aggregate exposure. `included` is false for a
+// regulatory line that was dropped because caps don't stack (kept for the
+// breakdown so the total is traceable, not silently discarded).
+export type ExposureLineItem = {
+  category: AttackCategoryId;
+  title?: string;
+  severity: number;
+  kind: ExposureKind;
+  basis: string;
+  amountSGD: number;
+  rangeSGD: [number, number];
+  included: boolean;
+};
+
 // Aggregated exposure across all confirmed breaks. Regulatory caps do NOT
 // stack (one breach, one statutory ceiling) — the aggregator takes the single
-// largest regulatory exposure and sums the rest.
+// largest regulatory exposure and sums the rest. The breakdown reconciles:
+//   naiveTotalSGD − regulatoryAdjustmentSGD === totalSGD
 export type ExposureSummary = {
   totalSGD: number;
   rangeSGD: [number, number];
@@ -95,6 +110,12 @@ export type ExposureSummary = {
   topBasis: string;
   // Distinct regulatory/standards drivers, for the one-line headline.
   drivers: ExposureKind[];
+  // Per-break itemisation (every break, included or dropped).
+  lines: ExposureLineItem[];
+  // What the total would be if every line stacked naively.
+  naiveTotalSGD: number;
+  // Amount removed because regulatory caps don't stack (≥ 0).
+  regulatoryAdjustmentSGD: number;
 };
 
 // A user-configured live bot reached over HTTP (the "grant access by URL" flow).
@@ -152,7 +173,65 @@ export type Bot = {
   httpTarget?: HttpTargetConfig;
 };
 
-export type SeverityBand = "secure" | "low" | "moderate" | "high" | "critical";
+export type SeverityBand =
+  | "secure"
+  | "low"
+  | "moderate"
+  | "high"
+  | "critical"
+  | "catastrophic";
+
+// ---- Severity rubric & risk-score derivation -----------------------------
+// The judge rates each break 1-10. Those raw scores slot into a documented
+// rubric of tiers, and the overall risk score is derived from them in a
+// traceable way (see lib/audit.ts → computeRiskScore). The UI renders the
+// rubric and the per-finding contributions, so a skeptical reader can follow
+// the headline number all the way down to the individual breaks.
+
+export type SeverityTierId = "critical" | "high" | "moderate" | "low";
+
+export type SeverityTier = {
+  id: SeverityTierId;
+  label: string;
+  // Inclusive severity range that maps into this tier.
+  range: [number, number];
+  meaning: string;
+  example: string;
+};
+
+// One broken finding's contribution to the accumulated risk score. `points` is
+// the marginal amount this finding adds to the saturating accumulated score, so
+// the contributions ALWAYS sum exactly to `accumulated` (see computeRiskScore).
+export type ScoreContribution = {
+  category: AttackCategoryId;
+  title: string;
+  severity: number;
+  tier: SeverityTierId;
+  points: number;
+};
+
+// What actually set the headline score, so the UI can explain it plainly.
+//  • "none"        — no breaks; floor score only.
+//  • "accumulated" — the severity-weighted total drove it (the common case);
+//                    score === sum of contributions.
+//  • "floor"       — a single worst break floored the band (e.g. one critical).
+//  • "saturation"  — the reserved 97-100 worst-case ceiling.
+export type ScoreDriver = "none" | "accumulated" | "floor" | "saturation";
+
+export type RiskScore = {
+  score: number; // 0-100, what the ring shows
+  band: SeverityBand;
+  // Severity-weighted, saturating total — sum of the contributions below.
+  accumulated: number;
+  // Floor set by the single worst break (guarantees band membership).
+  floor: number;
+  floorSeverity: number;
+  // The realistic ceiling (96); 97-100 is reserved for a saturated worst case.
+  cap: number;
+  saturated: boolean;
+  driver: ScoreDriver;
+  contributions: ScoreContribution[];
+};
 
 export type AuditSummary = {
   botId: string;
