@@ -66,8 +66,22 @@ export const TOUR_STEPS: TourStep[] = [
     route: "/",
     say: "Those attacks span six categories — prompt injection, personal-data extraction, jailbreaks, policy bypass, and more — each firing several concrete probes.",
   },
-  // ---- A real bot we own (FoxDesk): show how you point Redline at any
-  //      endpoint, then replay a captured real run (smooth + deterministic). ----
+  // ---- Audit your own bot, way 1: hand Redline a public GitHub repo and let
+  //      it find the system prompt (deterministic ?demo=github prefill). ----
+  {
+    id: "github",
+    route: "/audit/new?demo=github",
+    target: "gh-repo",
+    say: "You don't even need a deployed bot. Give Redline a public GitHub repo, and it reads the code to find the agent's system prompt automatically.",
+  },
+  {
+    id: "github-pick",
+    route: "/audit/new",
+    target: "gh-candidates",
+    say: "It surfaces the prompts it found, ranked — you pick one, and Redline runs the exact same attack battery against it. No endpoint, no setup.",
+  },
+  // ---- Audit your own bot, way 2: a real bot we own (FoxDesk) — point Redline
+  //      at any endpoint, then replay a captured real run (smooth + deterministic). ----
   {
     id: "foxdesk-open",
     route: "/audit/new",

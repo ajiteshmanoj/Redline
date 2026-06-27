@@ -41,16 +41,16 @@ A **light, editorial, security-edge** aesthetic:
 - **Fraunces serif** display headings with italic deep-red accent phrases; pill buttons; soft-shadow panels; generous spacing; scroll-reveal motion.
 - **Signature hero:** an auto-playing **live interrogation** — the adversarial agent types an attack, the bot replies, and a verdict slams in (`Broken · sev` red / `Held · safe` green), including a round that holds so it reads honest.
 - **Living backgrounds:** an animated dot-matrix scan field, varied section treatments, and a dramatic dark closing band + oversized wordmark footer.
+- **Self-driving voiced tour:** a one-click **guided demo** (`?tour=1` or the hero button) that drives a spotlight + cursor across every page, narrates each beat in a human voice (ElevenLabs, "Rachel"), navigates between routes, and runs a real audit — built to be screen-recorded. See *Guided demo* below.
 
-## The Engine — three OpenAI roles, adversarial by design
+## The Engine — four models, one adversarial pipeline
 
-Redline is not one model talking to itself. **OpenAI is the engine, used three ways at once** (surfaced in the landing "engine" section and the per-run model roster):
+Redline is not one model talking to itself. Each engagement runs **four distinct models in sequence** — surfaced on the landing "engine" section as a left-to-right pipeline ribbon (**Recon → Attack → Target → Judge**) and in the per-run model roster:
 
+- **Recon (Exa)** — a co-equal first stage. Before the adaptive agent attacks, **Exa neural web search** scouts the live web for the target company; OpenAI then distills the results (Structured Outputs) into named competitors and the personal-data types the business holds, which it weaponises into disparagement bait and PII pretexts. Exa finds the truth on the open web; OpenAI turns it into an attack plan. Gated on `EXA_API_KEY`; bot-only recon (or a captured demo fixture) when absent. See `lib/exa.ts` + `osintRecon` in `lib/adaptive.ts`.
 - **Attacker** — a **reasoning model (`gpt-5.5`)** that generates and escalates adversarial prompts. In the adaptive mode it profiles the target first, then pursues a goal over up to 5 turns, reading each reply and adapting.
-- **Judge** — a **separate call (`gpt-5.4`)** that scores every response with **Structured Outputs** (strict `json_schema`): `{ broken, severity, reason }`. It never sees its own attacks, so the verdict isn't a model grading its own homework. Parsed defensively, with a heuristic fallback when no key is present.
 - **Target** — the bot under test (`gpt-4.1-mini` for built-ins): a built-in demo bot, or any external chatbot reached as a black box over HTTP.
-
-**Real-world recon via Exa.** Before the adaptive agent attacks, it searches the live web (Exa neural search) for the target company, then the OpenAI attacker distills the results — Structured Outputs again — into named competitors and the personal-data types the business holds, which it weaponises into disparagement bait and PII pretexts. Exa finds the truth on the open web; OpenAI turns it into an attack plan. Gated on `EXA_API_KEY`; bot-only recon (or a captured demo fixture) when absent. See `lib/exa.ts` + `osintRecon` in `lib/adaptive.ts`.
+- **Judge** — a **separate call (`gpt-5.4`)** that scores every response with **Structured Outputs** (strict `json_schema`): `{ broken, severity, reason }`. It sees only the bot's reply against a fixed rubric — never the attacker's strategy — so the verdict isn't a model grading its own homework. Parsed defensively, with a heuristic fallback when no key is present.
 
 All LLM calls flow through a single `runAgent()` (`lib/llm.ts`) — the OpenAI Chat Completions shape, so it's also provider-agnostic. Run a stronger attacker than judge with per-role models (`LLM_MODEL_ATTACKER` / `_JUDGE` / `_TARGET`).
 
@@ -58,7 +58,10 @@ All LLM calls flow through a single `runAgent()` (`lib/llm.ts`) — the OpenAI C
 
 ```
 app/          Pages + API routes
-  page.tsx       Landing (hero, problem, engine, attack suite, standards strip)
+  page.tsx       Landing (hero, problem, four-model engine + pipeline ribbon,
+                 attack suite, "Built to a standard" section, standards strip)
+components/tour/ Self-driving voiced guided demo (spotlight + cursor + narration)
+lib/tour/        Tour script (steps as data — the single source of voiced narration)
   audit/…        Target selection, static console, adaptive, custom live targets
   watch/         Redline Watch — continuous monitoring dashboard
   benchmark/     State of AI Agent Security 2026 leaderboard
@@ -96,6 +99,9 @@ Three ways to red-team a real bot, all running the live battery (no fixtures):
 ### Benchmark (`/benchmark`)
 "State of AI Agent Security 2026" — an **A–F leaderboard** ranking common build *patterns/archetypes* (bare wrapper, persona bot, RAG template, tool-calling agent, hand-hardened, Redline-hardened) — **not named vendors**, which keeps it honest. Shock stats up top (e.g. 89% broke, 43% leaked PII), weighted by sample size, with a methodology note. Any bot you audit can **opt into the leaderboard** ("Add to benchmark") — submissions render in a **Your audits** section (localStorage today; the shape of a shared, growing dataset / data moat).
 
+### Guided demo — self-driving voiced tour (`components/tour/`, `lib/tour/script.ts`)
+A one-click walkthrough that demos the whole product hands-free — built to be screen-recorded for the pitch. Launched by `?tour=1` or the hero button (a `redline:tour` window event), it moves a **spotlight + cursor** across the page, **scrolls each target into view**, shows **subtitles**, plays the matching **human-voice narration** (ElevenLabs "Rachel"; `public/tour/*.mp3`), and **auto-advances** — with pause / skip / mute / restart controls. It performs **cross-route choreography** and demos **two of the three self-serve paths**: it lands on `/audit/new?demo=github`, shows Redline **finding a system prompt in a public GitHub repo** (a deterministic, network-free prefill — same fixture philosophy as the FoxDesk replay), then switches to the **HTTP path**, opens FoxDesk, **runs a real live audit**, and opens the report — before visiting Watch and Benchmark. The tour is **data**: `lib/tour/script.ts` holds the steps, and the same `say` text is both the on-screen subtitle *and* the source the generator (`scripts/gen-narration.mjs`) turns into audio — so spoken and shown words never drift. 19 steps (hero → live break → pipeline → roles → standards → attacks → **GitHub repo → candidates** → FoxDesk audit → report → Watch → Benchmark → close). New narration lines fall back to a silent timed-hold until `npm run tour:audio` regenerates the clips.
+
 ### Standards & compliance mapping (`lib/standards.ts`)
 Single source of truth, scoped accurately so a regulator-adjacent audience can't poke holes:
 - **OWASP LLM Top 10 (2025)** — applies to every finding.
@@ -115,7 +121,7 @@ Single source of truth, scoped accurately so a regulator-adjacent audience can't
 
 ## Targets
 
-**Three rigged demo bots** (Singapore SME scenarios, deliberately weak): **Ms. Bright** (tuition — PII/over-promise), **CareDesk** (clinic — injection/hallucination), **SwiftPay** (fintech — jailbreak/policy; the one `financial` target, so MAS applies). **One independent control** — **Northwind Support** (not rigged).
+**Three rigged demo bots** (Singapore SME scenarios, deliberately weak): **Ms. Bright** (tuition — PII/over-promise), **CareDesk** (clinic — injection/hallucination), **SwiftPay** (fintech — jailbreak/policy; the one `financial` target, so MAS applies). **Two independent controls** (not rigged): **Northwind Support** (a plain small-business assistant, captured from a real run) and **FoxDesk** — a **real, deployed bot we own** (XYZ Tuition's live assistant), audited as a genuine black box over its live HTTP endpoint with no access to its prompt. FoxDesk **held the line — 0 breaks across all 20 probes** (a clean, secure score: Redline can certify a well-built bot, not just find failures). Its run is replayed deterministically from a captured fixture (`lib/foxdesk-capture.json`) for a smooth demo, and it's the centerpiece of the guided tour.
 
 ## Routes
 
@@ -155,8 +161,11 @@ Env: `DEMO_MODE`, `LLM_API_KEY`, `LLM_BASE_URL`, `LLM_MODEL` (+ optional per-rol
 - ✅ **Redline Watch** — monitoring dashboard, sparklines, regression alert, CI snippet
 - ✅ **Benchmark** — State of AI Agent Security 2026 (build-pattern archetypes, A–F), **fed by real audits** you submit ("Add to benchmark" → "Your audits")
 - ✅ **Audit your own bot** — paste a system prompt, connect a public GitHub repo (`/api/extract-prompt` finds the prompt), or an HTTP endpoint; all run the real battery live
-- ✅ **Exa real-world recon** — adaptive agent searches the live web for the target company, OpenAI distills it (Structured Outputs) into real competitors + data types it then attacks with
-- ✅ **Engine section** — OpenAI reasoning attacker / Structured-Outputs judge / target, separate-judge design
+- ✅ **Exa real-world recon** — co-equal first stage; searches the live web for the target company, OpenAI distills it (Structured Outputs) into real competitors + data types it then attacks with
+- ✅ **Four-model engine** — Exa recon → OpenAI reasoning attacker → target → separate Structured-Outputs judge, shown as a landing pipeline ribbon
+- ✅ **Self-driving voiced guided demo** — spotlight + cursor + human narration, cross-route choreography, runs a live FoxDesk audit; built to be screen-recorded
+- ✅ **FoxDesk** — a real owned bot, audited as a live black box; certified clean (0/20), captured fixture for deterministic replay
+- ✅ **"Built to a standard"** landing section
 - ✅ Accurate standards mapping — OWASP (all) + PDPA (data) + MAS (proposed, FI-only), text badges + non-affiliation disclaimer
 - ✅ Honesty layer — independent control bot, reachability guard, varied transcripts
 - ✅ Responsible disclosure (PII redaction), saved reports, custom targets
@@ -170,4 +179,4 @@ Env: `DEMO_MODE`, `LLM_API_KEY`, `LLM_BASE_URL`, `LLM_MODEL` (+ optional per-rol
 
 ## Summary
 
-Redline is a **polished, technically credible MVP for a safety platform around AI agents**: a 20-attack battery plus a genuine adaptive multi-turn agent, a dollar-exposure model, a find→fix→prove loop, continuous monitoring (Watch), a public benchmark, accurate OWASP/PDPA/MAS mapping, and an honesty layer (control bot + reachability guard + varied transcripts) — wrapped in a premium editorial UI. Demo mode gives a bulletproof, network-free stage run; live mode audits any OpenAI-compatible provider or external HTTP bot. The arc is the pitch: **find it, fix it, prove it, watch it.**
+Redline is a **polished, technically credible MVP for a safety platform around AI agents**: a 20-attack battery plus a genuine adaptive multi-turn agent, a **four-model adversarial pipeline** (Exa recon → attacker → target → separate judge), a dollar-exposure model, a find→fix→prove loop, continuous monitoring (Watch), a public benchmark, accurate OWASP/PDPA/MAS mapping, and an honesty layer (two independent controls incl. a real owned bot, reachability guard, varied transcripts) — wrapped in a premium editorial UI with a **self-driving voiced guided demo** for the pitch. Demo mode gives a bulletproof, network-free stage run; live mode audits any OpenAI-compatible provider or external HTTP bot. The arc is the pitch: **find it, fix it, prove it, watch it.**

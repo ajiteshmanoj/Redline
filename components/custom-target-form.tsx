@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { Loader2, Check, X, Zap, Plug, Swords, Globe, FileText, Github, Search } from "lucide-react";
@@ -71,6 +71,31 @@ const PROMPT_PLACEHOLDER = `You are Ms. Bright, the friendly assistant for Brigh
 Paste the system prompt your bot runs on. Redline runs the full
 attack battery against it on the live path and reports where it breaks.`;
 
+// Deterministic, network-free sample for the guided tour (?demo=github). Mirrors
+// what /api/extract-prompt returns from a real public repo, so the candidate UI
+// can be demoed on stage without a live GitHub call — the same fixture approach
+// the FoxDesk replay uses. The live "Find prompt" path is unaffected.
+const DEMO_GITHUB = {
+  repo: "vercel/ai-chatbot",
+  candidates: [
+    {
+      path: "lib/ai/prompts.ts",
+      prompt:
+        "You are a friendly customer-support assistant. Keep responses concise and helpful. Answer questions about accounts, orders, and products. If you are unsure, say so — never invent policy, prices, or account details.",
+    },
+    {
+      path: "app/(chat)/actions.ts",
+      prompt:
+        "You are a helpful support agent. Be warm and professional, and resolve issues on the first contact.",
+    },
+  ],
+};
+
+function demoParam(): string | null {
+  if (typeof window === "undefined") return null;
+  return new URLSearchParams(window.location.search).get("demo");
+}
+
 const MODES: { id: Mode; label: string; icon: typeof Globe; note: string }[] = [
   { id: "prompt", label: "Paste prompt", icon: FileText, note: "Fastest — paste your system prompt" },
   { id: "github", label: "GitHub repo", icon: Github, note: "Find the prompt in a public repo" },
@@ -79,6 +104,11 @@ const MODES: { id: Mode; label: string; icon: typeof Globe; note: string }[] = [
 
 export function CustomTargetForm() {
   const [mode, setMode] = useState<Mode>("prompt");
+
+  // The guided tour lands here as /audit/new?demo=github — open that mode for it.
+  useEffect(() => {
+    if (demoParam() === "github") setMode("github");
+  }, []);
 
   return (
     <div>
@@ -123,6 +153,18 @@ function PromptForm({ mode }: { mode: Mode }) {
   const [repo, setRepo] = useState("");
   const [finding, setFinding] = useState(false);
   const [candidates, setCandidates] = useState<{ path: string; prompt: string }[] | null>(null);
+
+  // Guided tour (?demo=github): show a real-looking extraction result without a
+  // live GitHub call, so the candidate UI is on screen deterministically.
+  useEffect(() => {
+    if (mode !== "github" || demoParam() !== "github") return;
+    const top = DEMO_GITHUB.candidates[0];
+    setRepo(DEMO_GITHUB.repo);
+    setCandidates(DEMO_GITHUB.candidates);
+    setSystemPrompt(top.prompt);
+    setName(DEMO_GITHUB.repo);
+    setSource(`github:${DEMO_GITHUB.repo}/${top.path}`);
+  }, [mode]);
 
   const find = async () => {
     setErr(null);
@@ -173,6 +215,7 @@ function PromptForm({ mode }: { mode: Mode }) {
       <div className="panel grain space-y-5 p-6">
         {mode === "github" ? (
           <div>
+            <div data-tour="gh-repo">
             <Field label="Public GitHub repo" hint="owner/name or a full github.com URL. Public repos only.">
               <div className="flex gap-2">
                 <input
@@ -189,9 +232,10 @@ function PromptForm({ mode }: { mode: Mode }) {
                 </Button>
               </div>
             </Field>
+            </div>
 
             {candidates ? (
-              <div>
+              <div data-tour="gh-candidates">
                 <p className="mono-label mb-2">
                   Found {candidates.length} candidate{candidates.length === 1 ? "" : "s"} — pick one
                 </p>
