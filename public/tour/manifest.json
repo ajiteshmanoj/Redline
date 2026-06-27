@@ -5,77 +5,77 @@
     {
       "id": "hero",
       "chars": 148,
-      "bytes": 143822
+      "bytes": 144657
     },
     {
       "id": "live-break",
       "chars": 146,
-      "bytes": 174333
+      "bytes": 151763
     },
     {
       "id": "pipeline",
       "chars": 189,
-      "bytes": 182274
+      "bytes": 191887
     },
     {
       "id": "roles",
       "chars": 283,
-      "bytes": 286346
+      "bytes": 294705
     },
     {
       "id": "standards",
       "chars": 164,
-      "bytes": 199410
+      "bytes": 206097
     },
     {
       "id": "attacks",
       "chars": 154,
-      "bytes": 159286
+      "bytes": 183946
     },
     {
       "id": "foxdesk-open",
       "chars": 119,
-      "bytes": 117072
+      "bytes": 108713
     },
     {
       "id": "foxdesk-config",
-      "chars": 168,
-      "bytes": 175586
+      "chars": 166,
+      "bytes": 177258
     },
     {
       "id": "foxdesk-run",
-      "chars": 75,
-      "bytes": 75276
+      "chars": 56,
+      "bytes": 45601
     },
     {
       "id": "foxdesk-running",
-      "chars": 126,
-      "bytes": 134208
+      "chars": 98,
+      "bytes": 104951
     },
     {
       "id": "foxdesk-report",
-      "chars": 37,
-      "bytes": 30973
+      "chars": 23,
+      "bytes": 21777
     },
     {
       "id": "report",
-      "chars": 154,
-      "bytes": 153435
+      "chars": 196,
+      "bytes": 215711
     },
     {
       "id": "watch",
       "chars": 200,
-      "bytes": 179348
+      "bytes": 180184
     },
     {
       "id": "benchmark",
       "chars": 139,
-      "bytes": 143822
+      "bytes": 133373
     },
     {
       "id": "closing",
       "chars": 91,
-      "bytes": 89487
+      "bytes": 84471
     }
   ]
 }

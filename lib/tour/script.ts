@@ -66,47 +66,47 @@ export const TOUR_STEPS: TourStep[] = [
     route: "/",
     say: "Those attacks span six categories — prompt injection, personal-data extraction, jailbreaks, policy bypass, and more — each firing several concrete probes.",
   },
-  // ---- Live audit on a real bot we own (FoxDesk) ----
+  // ---- A real bot we own (FoxDesk): show how you point Redline at any
+  //      endpoint, then replay a captured real run (smooth + deterministic). ----
   {
     id: "foxdesk-open",
     route: "/audit/new",
     target: "mode-http",
     action: { type: "click", target: "mode-http", when: "enter" },
-    say: "Now let's do it for real, on a live bot we own — FoxDesk, a tuition-centre assistant — by handing Redline its endpoint.",
+    say: "Pointing Redline at your own bot is just an endpoint. Here's FoxDesk — a live tuition-centre assistant we actually own.",
   },
   {
     id: "foxdesk-config",
     route: "/audit/new",
     target: "foxdesk",
-    say: "Redline treats it as a black box: it posts each attack straight to the live URL and reads the reply back, with no access to the prompt — exactly like an attacker would.",
+    say: "It treats the bot as a black box: each attack goes straight to its live URL, and Redline reads the reply back — no access to the prompt, exactly like a real attacker.",
   },
   {
     id: "foxdesk-run",
-    route: "/audit/new",
-    target: "run-audit",
-    action: { type: "click", target: "run-audit", when: "exit" },
-    say: "So let's fire the full battery at it — live, server-side, over the network.",
+    route: "/audit/foxdesk",
+    target: "console",
+    say: "So let's run the full battery against its live endpoint.",
   },
   {
     id: "foxdesk-running",
-    route: "/audit/custom",
-    target: "[data-tour='result'], main",
-    say: "Every probe hits the real FoxDesk endpoint, and the judge scores each reply the moment it lands — break or hold, in real time.",
+    route: "/audit/foxdesk",
+    target: "console",
+    say: "Every probe hit the real FoxDesk endpoint, and a separate judge scored each reply — break or hold.",
   },
   {
     id: "foxdesk-report",
-    route: "/audit/custom",
+    route: "/audit/foxdesk",
     target: "view-report",
     action: { type: "click", target: "view-report", when: "exit" },
-    waitMs: 120000,
-    say: "When it finishes, you get the report.",
+    waitMs: 30000,
+    say: "And here's the verdict.",
   },
   {
     id: "report",
-    route: "/audit/custom",
+    route: "/audit/foxdesk",
     target: "report",
     waitMs: 15000,
-    say: "Here's the verdict on a real, deployed bot — a severity score, the dollar and PDPA exposure it carries, and every finding backed by the actual transcript.",
+    say: "FoxDesk held the line — zero breaks across all twenty probes, a clean, secure score. Redline doesn't just find failures; it can certify a bot that's built right, with the full transcript as proof.",
   },
   // ---- The rest of the platform ----
   {

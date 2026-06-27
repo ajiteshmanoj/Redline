@@ -105,7 +105,7 @@ export function AuditExperience({
 
         <AnimatePresence mode="wait">
           {view === "console" ? (
-            <motion.div key="console" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0, y: -12 }} transition={{ duration: 0.3 }}>
+            <motion.div data-tour="console" key="console" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0, y: -12 }} transition={{ duration: 0.3 }}>
               <AuditConsole targetName={title} state={state} onViewReport={goReport} />
             </motion.div>
           ) : view === "report" ? (

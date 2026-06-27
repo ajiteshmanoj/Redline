@@ -8,6 +8,10 @@ import type {
 } from "./types";
 import { ATTACKS } from "./attacks";
 import { ADAPTIVE_FIXTURES, ADAPTIVE_PROFILES } from "./adaptive-fixtures";
+// A real, captured FoxDesk audit (live run against its endpoint + live judge).
+// Replayed in DEMO_MODE so the guided demo runs deterministically. FoxDesk held
+// the line — 0 breaks — and the transcript here is exactly what it returned.
+import foxdeskCapture from "./foxdesk-capture.json";
 
 /** The recon profile captured for a demo bot (replayed before its campaigns). */
 export function getAdaptiveProfile(botId: string): TargetProfile | null {
@@ -572,6 +576,8 @@ export function getAdaptiveFixture(botId: string): AdaptiveCampaign[] | null {
 
 /** Build the full ordered result list for a bot from fixtures. */
 export function getFixtureResults(botId: string): AttackResult[] {
+  // FoxDesk replays a captured real run verbatim (not scripted deflections).
+  if (botId === "foxdesk") return foxdeskCapture as AttackResult[];
   const scripted = FIXTURE_MAP[botId] ?? {};
   return ATTACKS.map((attack) => {
     const s = scripted[attack.id] ?? deflect(botId, attack);
