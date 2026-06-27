@@ -374,7 +374,7 @@ function SiteFooter() {
       {/* oversized wordmark — faint ink, embossed on the cream */}
       <p
         aria-hidden
-        className="pointer-events-none select-none px-4 text-center font-display italic leading-[0.74] text-black/[0.04]"
+        className="pointer-events-none select-none px-4 text-center font-display font-semibold italic leading-[0.74] text-black/[0.10]"
         style={{ fontSize: "clamp(5rem, 22vw, 18rem)" }}
       >
         Redline
