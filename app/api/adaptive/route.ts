@@ -11,6 +11,7 @@ import {
   systemPromptResponder,
   type TargetResponder,
 } from "@/lib/adaptive";
+import { exaConfigured } from "@/lib/exa";
 import { getAdaptiveFixture, getAdaptiveProfile } from "@/lib/fixtures";
 import { isDemoMode, modelFor } from "@/lib/llm";
 import { sleep } from "@/lib/utils";
@@ -23,6 +24,10 @@ export const dynamic = "force-dynamic";
 // stays short and sharp on stage.
 const DEMO_TURN_MS = 340;
 const DEMO_GAP_MS = 200;
+
+// Label for the Exa recon role in the "AI in this run" roster (not an LLM, so
+// it has no model id — it's the agent's eyes on the real world).
+const RECON_MODEL = "Exa · neural web search";
 
 /** Run every adaptive goal live against a responder, streaming events. */
 async function runLiveCampaigns(
@@ -88,7 +93,11 @@ export async function POST(req: NextRequest) {
           mode: "live",
           model: modelFor("attacker"),
           // External target is the user's bot; attacker + judge are our models.
-          models: { attacker: modelFor("attacker"), judge: modelFor("judge") },
+          models: {
+            ...(exaConfigured() ? { recon: RECON_MODEL } : {}),
+            attacker: modelFor("attacker"),
+            judge: modelFor("judge"),
+          },
         });
         try {
           await runLiveCampaigns(name, httpResponder(target), send, name);
@@ -111,7 +120,12 @@ export async function POST(req: NextRequest) {
           maxTurns: MAX_TURNS,
           mode: "live",
           model: modelFor("attacker"),
-          models: { attacker: modelFor("attacker"), target: modelFor("target"), judge: modelFor("judge") },
+          models: {
+            ...(exaConfigured() ? { recon: RECON_MODEL } : {}),
+            attacker: modelFor("attacker"),
+            target: modelFor("target"),
+            judge: modelFor("judge"),
+          },
         });
         try {
           await runLiveCampaigns(name, systemPromptResponder(prompt.systemPrompt), send, name);
@@ -136,7 +150,14 @@ export async function POST(req: NextRequest) {
         mode: demo ? "demo" : "live",
         model: demo ? undefined : modelFor("attacker"),
         // Roster shown in both modes (config); demo replays captured fixtures.
-        models: { attacker: modelFor("attacker"), target: modelFor("target"), judge: modelFor("judge") },
+        // Recon is part of the run in demo (the captured run used Exa) or live
+        // when an Exa key is configured.
+        models: {
+          ...(demo || exaConfigured() ? { recon: RECON_MODEL } : {}),
+          attacker: modelFor("attacker"),
+          target: modelFor("target"),
+          judge: modelFor("judge"),
+        },
       });
 
       try {

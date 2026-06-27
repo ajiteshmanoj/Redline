@@ -252,6 +252,8 @@ export type AuditSummary = {
 // Which model plays each AI role this run. Roles absent from a run (e.g. an
 // external HTTP target has no "target" model of ours) are simply omitted.
 export type RoleModels = {
+  // Real-world recon (Exa neural search) — present only when the run used it.
+  recon?: string;
   attacker?: string;
   target?: string;
   judge?: string;

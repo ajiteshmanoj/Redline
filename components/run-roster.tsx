@@ -1,10 +1,11 @@
-import { Scale, Swords } from "lucide-react";
+import { Globe, Scale, Swords } from "lucide-react";
 import type { RoleModels } from "@/lib/types";
 
 /**
- * "AI in this run" body — shows which OpenAI model plays each role this run, so
- * judges see deliberate, role-differentiated model use. Honest about mode: live
- * = calling now; demo = configured roster, replaying a captured run.
+ * "AI in this run" body — shows the role each model plays this run, so judges
+ * see a deliberate, role-differentiated pipeline: an Exa recon scout, an OpenAI
+ * attacker, the target, and a separate OpenAI judge. Honest about mode: live =
+ * calling now; demo = configured roster, replaying a captured run.
  */
 export function RunRoster({
   models,
@@ -17,6 +18,15 @@ export function RunRoster({
   return (
     <>
       <ul className="space-y-3 text-sm">
+        {models.recon ? (
+          <RosterRow
+            icon={<Globe className="mt-0.5 h-3.5 w-3.5 shrink-0 text-redline" />}
+            label="Recon scout"
+            note="profiles the real company on the live web, first"
+            model={models.recon}
+            tag="OSINT → OpenAI"
+          />
+        ) : null}
         {models.attacker ? (
           <RosterRow
             icon={<Swords className="mt-0.5 h-3.5 w-3.5 shrink-0 text-redline" />}

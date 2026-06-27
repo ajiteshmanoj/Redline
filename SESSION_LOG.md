@@ -42,3 +42,4 @@ network). Light editorial UI.
 - 2026-06-27 10:35 · Transparency pass: rubric-driven score (no flat 100), exposure itemisation, PDPA hero (139623a)
 - 2026-06-27 10:42 · Update SESSION_LOG (564e44f)
 - 2026-06-27 11:20 · Exa OSINT recon for the adaptive agent + foreground OpenAI as the engine (ee20dba)
+- 2026-06-27 11:21 · Update SESSION_LOG (aa92892)

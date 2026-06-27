@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { ArrowRight, ShieldCheck, Scale, Zap, Check, Crosshair, Gavel, Bot, Layers } from "lucide-react";
+import { ArrowRight, ShieldCheck, Scale, Zap, Check, Crosshair, Gavel, Bot, Layers, Globe } from "lucide-react";
 import { SiteNav } from "@/components/site-nav";
 import { StandardsStrip } from "@/components/standards-strip";
 import { Button } from "@/components/ui/button";
@@ -22,22 +22,28 @@ const GRADIENT_CTA =
 
 const ENGINE_ROLES = [
   {
+    icon: Globe,
+    title: "The scout",
+    role: "Exa · neural web search",
+    body: "Before the multi-turn agent attacks, Exa searches the live web for the target company. OpenAI distills the results into real competitors and the personal data the business holds — so the attacks are grounded in reality, not guesses.",
+  },
+  {
     icon: Crosshair,
     title: "The attacker",
     role: "OpenAI reasoning model · gpt-5.5",
-    body: "An OpenAI reasoning model generates and escalates real attacks. In the multi-turn mode it profiles the target first — searching the live web with Exa — then pursues a goal over up to five turns, reading each reply and adapting.",
-  },
-  {
-    icon: Gavel,
-    title: "The judge",
-    role: "OpenAI · Structured Outputs · gpt-5.4",
-    body: "A separate OpenAI call scores every response with Structured Outputs — strict broken / severity / reason. It never sees its own attacks, so the verdict isn't a model marking its own homework.",
+    body: "An OpenAI reasoning model generates and escalates real attacks. In the multi-turn mode it pursues a goal over up to five turns, reading each reply and adapting — armed with the scout's intel.",
   },
   {
     icon: Bot,
     title: "The target",
     role: "bot under test · gpt-4.1-mini",
     body: "Your bot, or any external chatbot reached over HTTP as a black box. Redline drives it exactly as a real user would and judges the actual responses it gives.",
+  },
+  {
+    icon: Gavel,
+    title: "The judge",
+    role: "OpenAI · Structured Outputs · gpt-5.4",
+    body: "A separate OpenAI call scores every response with Structured Outputs — strict broken / severity / reason. It never sees its own attacks, so the verdict isn't a model marking its own homework.",
   },
 ];
 
@@ -250,11 +256,11 @@ export default function LandingPage() {
       {/* ===================== THE ENGINE ===================== */}
       <Section id="engine">
         <SectionHeading
-          eyebrow="The engine · powered by OpenAI"
-          title="Three OpenAI roles, adversarial by design."
-          sub="Redline isn't one model talking to itself. A reasoning-model attacker, a separate Structured-Outputs judge, and the target each play a distinct OpenAI role — that separation is what makes the verdict credible."
+          eyebrow="The engine · OpenAI + Exa"
+          title="Four roles, adversarial by design."
+          sub="Redline isn't one model talking to itself. An Exa recon scout, a reasoning-model attacker, the target, and a separate Structured-Outputs judge each play a distinct role — three OpenAI models plus live-web recon. That separation is what makes the verdict credible."
         />
-        <div className="mt-12 grid gap-5 md:grid-cols-3">
+        <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
           {ENGINE_ROLES.map((r, i) => (
             <Reveal key={r.title} delay={i}>
               <div className="panel h-full p-6">
