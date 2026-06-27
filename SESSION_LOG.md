@@ -1,7 +1,6 @@
 # Redline — Session Log
 
-> Auto-maintained. A **Stop hook** (`.claude/settings.local.json`) appends each new
-> git commit below as Claude works. Edit the summary by hand anytime.
+> Auto-maintained: each new git commit is appended below. Edit the summary by hand anytime.
 
 ## What this is
 **Redline** — an adversarial AI security platform that red-teams customer-facing chatbots:
@@ -46,3 +45,5 @@ network). Light editorial UI.
 - 2026-06-27 13:28 · Surface Exa as a co-equal 4th AI role (landing + in-run roster) (5eee57c)
 - 2026-06-27 13:45 · Engine section: surface the architecture as a pipeline ribbon (654aacf)
 - 2026-06-27 13:53 · Add "Built to a standard" landing section (§5) (fed3060)
+- 2026-06-27 14:28 · Add self-driving guided demo (voiced) with live FoxDesk audit (dc60d64)
+- 2026-06-27 15:07 · Add self-driving guided demo (voiced) with live FoxDesk audit (d12cd6b)

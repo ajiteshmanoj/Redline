@@ -19,11 +19,11 @@
 //   • Azure OpenAI / OpenRouter / Together / Groq / Fireworks / local vLLM /
 //     Ollama (with its OpenAI-compatible /v1 endpoint), etc.
 //       LLM_BASE_URL=https://openrouter.ai/api/v1
-//       LLM_MODEL=anthropic/claude-3.5-sonnet
+//       LLM_MODEL=meta-llama/llama-3.3-70b-instruct
 //       LLM_API_KEY=...
 //
-//   • A provider with a DIFFERENT wire shape (e.g. Anthropic's native
-//     /v1/messages): replace the body/headers/parse inside `callChatCompletions`
+//   • A provider with a DIFFERENT wire shape (e.g. a vendor's own native
+//     message-format API): replace the body/headers/parse inside `callChatCompletions`
 //     below. That is the ONLY function you need to rewrite. Keep the exported
 //     `runAgent` signature identical and the whole app keeps working.
 //

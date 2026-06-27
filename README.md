@@ -154,7 +154,7 @@ All provider specifics live in [`lib/llm.ts`](lib/llm.ts); the rest of the app o
 `runAgent(messages, systemPrompt)`. It's the **OpenAI Chat Completions** shape by default, so any
 compatible endpoint works by changing env vars — OpenRouter
 (`LLM_BASE_URL=https://openrouter.ai/api/v1`), Together / Groq / Fireworks / vLLM / Ollama (`/v1`).
-A different wire shape (e.g. Anthropic's native `/v1/messages`) needs only the single
+A different wire shape (e.g. a vendor's own native message-format API) needs only the single
 `callChatCompletions` function rewritten; `runAgent`'s signature stays and the whole app keeps
 working.
 </details>

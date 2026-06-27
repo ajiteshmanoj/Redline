@@ -10,5 +10,3 @@ next-env.d.ts
 .DS_Store
 .gstack/
 .vercel
-
-.claude/settings.local.json
