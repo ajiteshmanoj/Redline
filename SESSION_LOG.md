@@ -34,3 +34,4 @@ network). Light editorial UI.
 - 2026-06-24 17:23 · Make footer wordmark prominent (bolder, higher contrast) (0dad80d)
 - 2026-06-25 00:03 · Nav: collapse into a translucent floating pill on scroll (639cec7)
 - 2026-06-26 13:13 · Add auto-maintained SESSION_LOG.md + Stop-hook (local) to append commits (61e3972)
+- 2026-06-26 14:30 · Add fundability features: fix-loop climax, $ exposure, Watch, Benchmark (dc70227)
