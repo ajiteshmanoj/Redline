@@ -10,6 +10,13 @@ import {
   targetSelector,
   type TourStep,
 } from "@/lib/tour/script";
+import { Logomark } from "@/components/brand";
+
+// At the tail of the closing narration ("…That's Redline."), reveal a full-screen
+// brand splash. This much lead time (s) before the clip ends lands it on the line.
+const FLASH_LEAD_S = 2.3;
+// How long the splash lingers after the narration finishes, before the tour ends.
+const FLASH_LINGER_MS = 1800;
 
 type Rect = { top: number; left: number; width: number; height: number };
 
@@ -52,9 +59,11 @@ export function GuidedTour({ steps = TOUR_STEPS }: { steps?: TourStep[] }) {
   const [playing, setPlaying] = useState(true);
   const [muted, setMuted] = useState(false);
   const [rect, setRect] = useState<Rect | null>(null);
+  const [flash, setFlash] = useState(false);
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const holdTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const endTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const playingRef = useRef(true);
   const mutedRef = useRef(false);
   const step = steps[index];
@@ -64,6 +73,7 @@ export function GuidedTour({ steps = TOUR_STEPS }: { steps?: TourStep[] }) {
     setIndex(0);
     setPlaying(true);
     playingRef.current = true;
+    setFlash(false);
     setActive(true);
   }, []);
 
@@ -78,18 +88,32 @@ export function GuidedTour({ steps = TOUR_STEPS }: { steps?: TourStep[] }) {
   const clearTimers = useCallback(() => {
     if (holdTimer.current) clearTimeout(holdTimer.current);
     holdTimer.current = null;
+    if (endTimer.current) clearTimeout(endTimer.current);
+    endTimer.current = null;
     if (audioRef.current) {
       audioRef.current.pause();
       audioRef.current.onended = null;
       audioRef.current.onerror = null;
+      audioRef.current.ontimeupdate = null;
       audioRef.current = null;
     }
   }, []);
 
   const stop = useCallback(() => {
     clearTimers();
+    setFlash(false);
     setActive(false);
   }, [clearTimers]);
+
+  // The closing step ends on the brand splash: keep it on screen for a beat,
+  // fade it, then end the tour. (Used in place of doAdvance for that step.)
+  const finishWithFlash = useCallback(() => {
+    setFlash(true);
+    endTimer.current = setTimeout(() => {
+      setFlash(false);
+      endTimer.current = setTimeout(() => stop(), 480);
+    }, FLASH_LINGER_MS);
+  }, [stop]);
 
   const clickTarget = useCallback((sel: string) => {
     const t = document.querySelector(targetSelector(sel));
@@ -155,16 +179,32 @@ export function GuidedTour({ steps = TOUR_STEPS }: { steps?: TourStep[] }) {
       positionToTarget();
       setTimeout(() => !cancelled && positionToTarget(), 380);
 
-      // 5. narrate — audio if a clip exists, else a timed hold
+      // 5. narrate — audio if a clip exists, else a timed hold. The final step
+      //    ends on a full-screen brand splash timed to "…That's Redline."
+      const isClosing = step.id === "closing";
+      const onDone = isClosing ? finishWithFlash : doAdvance;
+
       const armFallback = () => {
-        holdTimer.current = setTimeout(doAdvance, step.holdMs ?? fallbackHoldMs(step.say));
+        const total = step.holdMs ?? fallbackHoldMs(step.say);
+        // No audio: reveal the splash near the tail of the (silent) hold.
+        const wait = isClosing ? Math.max(400, total - FLASH_LEAD_S * 1000) : total;
+        holdTimer.current = setTimeout(onDone, wait);
       };
       if (mutedRef.current) {
         armFallback();
       } else {
         const audio = new Audio(`${AUDIO_BASE}/${step.id}.mp3`);
         audioRef.current = audio;
-        audio.onended = doAdvance;
+        if (isClosing) {
+          // Reveal the splash a beat before the clip ends — on the closing line.
+          audio.ontimeupdate = () => {
+            if (audio.duration && audio.duration - audio.currentTime <= FLASH_LEAD_S) {
+              setFlash(true);
+              audio.ontimeupdate = null;
+            }
+          };
+        }
+        audio.onended = onDone;
         audio.onerror = armFallback; // clip not generated yet → timed hold
         audio.play().catch(armFallback); // autoplay blocked → timed hold
       }
@@ -229,6 +269,43 @@ export function GuidedTour({ steps = TOUR_STEPS }: { steps?: TourStep[] }) {
     <div className="fixed inset-0 z-[80]">
       {/* Click-blocker so the page isn't interactable mid-tour. */}
       <div className="absolute inset-0" />
+
+      {/* Closing brand splash — fills the screen on "…That's Redline." */}
+      <AnimatePresence>
+        {flash ? (
+          <motion.div
+            key="brand-flash"
+            className="absolute inset-0 z-[88] flex flex-col items-center justify-center bg-night text-center"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.4 }}
+          >
+            {/* faint red glow behind the mark */}
+            <div className="pointer-events-none absolute h-[60vmin] w-[60vmin] rounded-full bg-redline/20 blur-[120px]" />
+            <motion.div
+              className="relative flex flex-col items-center"
+              initial={{ scale: 0.82, opacity: 0, y: 14 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              transition={{ type: "spring", stiffness: 220, damping: 18 }}
+            >
+              <Logomark className="h-28 w-28 drop-shadow-[0_10px_44px_rgba(194,14,46,0.55)] sm:h-36 sm:w-36" />
+              <span className="mt-6 font-display text-7xl font-semibold tracking-tight text-[#F7F4EE] sm:text-8xl">
+                Redline
+              </span>
+              <motion.span
+                className="mt-5 block h-[3px] w-44 origin-center bg-redline"
+                initial={{ scaleX: 0 }}
+                animate={{ scaleX: 1 }}
+                transition={{ delay: 0.22, duration: 0.5, ease: "easeOut" }}
+              />
+              <span className="mt-6 text-xs uppercase tracking-[0.32em] text-white/55 sm:text-sm">
+                The safety layer for AI agents
+              </span>
+            </motion.div>
+          </motion.div>
+        ) : null}
+      </AnimatePresence>
 
       {/* Spotlight: a transparent rect with a huge dim shadow = a "hole". */}
       {rect ? (
