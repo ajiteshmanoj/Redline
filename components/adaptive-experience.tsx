@@ -40,13 +40,14 @@ export function AdaptiveExperience({
   title,
   botId,
   target,
+  prompt,
   financial = false,
 }: {
   title: string;
   // Financial institution → MAS proposed guidelines are in scope (FIs only).
   financial?: boolean;
 } & AdaptiveRunConfig) {
-  const { state, start } = useAdaptive({ botId, target });
+  const { state, start } = useAdaptive({ botId, target, prompt });
 
   useEffect(() => {
     void start();

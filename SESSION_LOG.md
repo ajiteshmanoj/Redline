@@ -37,3 +37,4 @@ network). Light editorial UI.
 - 2026-06-26 14:30 · Add fundability features: fix-loop climax, $ exposure, Watch, Benchmark (dc70227)
 - 2026-06-26 15:06 · Fixtures: vary HELD demo responses so transcripts read like a real bot (cce0895)
 - 2026-06-26 15:08 · Update SESSION_LOG (d5a28b4)
+- 2026-06-26 16:15 · Ground standards mapping in reality + surface the AI engine (c6d783d)

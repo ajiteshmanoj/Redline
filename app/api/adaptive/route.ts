@@ -13,7 +13,7 @@ import {
 import { getAdaptiveFixture, getAdaptiveProfile } from "@/lib/fixtures";
 import { isDemoMode, modelFor } from "@/lib/llm";
 import { sleep } from "@/lib/utils";
-import type { AdaptiveCampaign, AdaptiveEvent, HttpTargetConfig } from "@/lib/types";
+import type { AdaptiveCampaign, AdaptiveEvent, HttpTargetConfig, PromptTarget } from "@/lib/types";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -54,9 +54,10 @@ async function runLiveCampaigns(
 }
 
 export async function POST(req: NextRequest) {
-  const { botId, target } = (await req.json().catch(() => ({}))) as {
+  const { botId, target, prompt } = (await req.json().catch(() => ({}))) as {
     botId?: string;
     target?: HttpTargetConfig;
+    prompt?: PromptTarget;
   };
   const bot = botId ? getBot(botId) : undefined;
 
@@ -87,6 +88,29 @@ export async function POST(req: NextRequest) {
         });
         try {
           await runLiveCampaigns(name, httpResponder(target), send);
+        } catch (err) {
+          return fail((err as Error).message);
+        }
+        controller.close();
+        return;
+      }
+
+      // A user-supplied system prompt (pasted / from GitHub) — always live.
+      if (prompt) {
+        if (!prompt.systemPrompt?.trim()) return fail("A system prompt is required.");
+        const name = prompt.name || "Your bot";
+        send({
+          type: "start",
+          botId: "custom",
+          botName: name,
+          totalGoals: ADAPTIVE_GOALS.length,
+          maxTurns: MAX_TURNS,
+          mode: "live",
+          model: modelFor("attacker"),
+          models: { attacker: modelFor("attacker"), target: modelFor("target"), judge: modelFor("judge") },
+        });
+        try {
+          await runLiveCampaigns(name, systemPromptResponder(prompt.systemPrompt), send);
         } catch (err) {
           return fail((err as Error).message);
         }

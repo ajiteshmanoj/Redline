@@ -5,7 +5,7 @@ import { getFixtureResults, getHardenedFixtureResults } from "@/lib/fixtures";
 import { isDemoMode, modelFor } from "@/lib/llm";
 import { summarize, vulnerabilities, suggestPatches, buildHardenedPrompt } from "@/lib/audit";
 import { sleep } from "@/lib/utils";
-import type { AuditEvent, AttackResult, HttpTargetConfig } from "@/lib/types";
+import type { AuditEvent, AttackResult, HttpTargetConfig, PromptTarget } from "@/lib/types";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -16,10 +16,11 @@ const DEMO_THINK_MS = 300; // time the attack appears "in flight"
 const DEMO_GAP_MS = 120; // pause between attacks
 
 export async function POST(req: NextRequest) {
-  const { botId, hardened, target } = (await req.json().catch(() => ({}))) as {
+  const { botId, hardened, target, prompt } = (await req.json().catch(() => ({}))) as {
     botId?: string;
     hardened?: boolean;
     target?: HttpTargetConfig;
+    prompt?: PromptTarget;
   };
   const bot = botId ? getBot(botId) : undefined;
   const isHardened = Boolean(hardened);
@@ -61,6 +62,46 @@ export async function POST(req: NextRequest) {
             collected.push(result);
             send({ type: "attack_result", result, index: i, total: attacks.length });
             await sleep(250); // be polite to the target
+          }
+          send({
+            type: "done",
+            summary: summarize(name, collected),
+            vulnerabilities: vulnerabilities(collected),
+            patches: suggestPatches(collected),
+          });
+        } catch (err) {
+          return fail((err as Error).message);
+        }
+        controller.close();
+        return;
+      }
+
+      // ===== User-supplied system prompt (pasted / from GitHub) =====
+      // Always runs live — there are no fixtures for an arbitrary bot. The
+      // hardened re-audit applies Redline's patches to the supplied prompt, so
+      // "prove the fix" works here too.
+      if (prompt) {
+        if (!prompt.systemPrompt?.trim()) return fail("A system prompt is required.");
+        const name = prompt.name || "Your bot";
+        const systemPrompt = isHardened
+          ? buildHardenedPrompt(prompt.systemPrompt)
+          : prompt.systemPrompt;
+        send({
+          type: "start",
+          botId: "custom",
+          botName: name,
+          total: attacks.length,
+          mode: "live",
+          model: modelFor("judge"),
+          models: { target: modelFor("target"), judge: modelFor("judge") },
+        });
+        try {
+          for (let i = 0; i < attacks.length; i++) {
+            const attack = attacks[i];
+            send({ type: "attack_start", attackId: attack.id, category: attack.category, title: attack.title });
+            const result = await runAttackLive(attack, systemPrompt);
+            collected.push(result);
+            send({ type: "attack_result", result, index: i, total: attacks.length });
           }
           send({
             type: "done",

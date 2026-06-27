@@ -23,12 +23,13 @@ export default function NewTargetPage() {
             <Badge variant="danger">Real audit</Badge>
           </div>
           <h1 className="font-display text-4xl font-bold tracking-tight sm:text-5xl">
-            Point Redline at a live bot.
+            Red-team your own bot.
           </h1>
           <p className="mt-4 text-lg text-chalk-dim">
-            Give Redline access to any chatbot that speaks JSON over HTTP — your own, a client&apos;s,
-            or a deployed demo. It fires the real attack battery at the live endpoint and reports
-            exactly where it breaks. No fixtures, no script.
+            Three ways in: paste your <span className="text-chalk">system prompt</span>, point Redline
+            at a <span className="text-chalk">public GitHub repo</span> and let it find the prompt, or
+            give it a live <span className="text-chalk">HTTP endpoint</span>. It fires the real attack
+            battery and reports exactly where your bot breaks. No fixtures, no script.
           </p>
         </div>
 

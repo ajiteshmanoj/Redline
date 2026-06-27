@@ -9,11 +9,16 @@ import type {
   Vulnerability,
   AttackCategoryId,
   HttpTargetConfig,
+  PromptTarget,
   RoleModels,
 } from "@/lib/types";
 import { scoreResults } from "@/lib/audit";
 
-export type AuditRunConfig = { botId?: string; target?: HttpTargetConfig };
+export type AuditRunConfig = {
+  botId?: string;
+  target?: HttpTargetConfig;
+  prompt?: PromptTarget;
+};
 
 export type AuditPhase = "idle" | "running" | "done" | "error";
 

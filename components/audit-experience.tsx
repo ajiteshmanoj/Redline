@@ -21,6 +21,7 @@ export function AuditExperience({
   subtitle,
   allowProve = false,
   financial = false,
+  benchmark,
 }: {
   run: AuditRunConfig;
   title: string;
@@ -28,6 +29,8 @@ export function AuditExperience({
   allowProve?: boolean;
   // Financial institution → MAS proposed guidelines are in scope.
   financial?: boolean;
+  // When set (a real user-audited bot), enables "add to the public benchmark".
+  benchmark?: { name: string; source?: string };
 }) {
   const { state, start } = useAudit(run);
   const [view, setView] = useState<View>("console");
@@ -115,6 +118,7 @@ export function AuditExperience({
                 endpoint={run.target?.endpoint}
                 adaptiveBotId={run.botId}
                 financial={financial}
+                benchmark={benchmark}
               />
             </motion.div>
           ) : (

@@ -2,37 +2,51 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import type { HttpTargetConfig } from "@/lib/types";
 import { AuditExperience } from "@/components/audit-experience";
-import { TARGET_STORAGE_KEY } from "@/components/custom-target-form";
+import { TARGET_STORAGE_KEY, type StoredTarget } from "@/components/custom-target-form";
 
 export default function CustomAuditPage() {
   const router = useRouter();
-  const [target, setTarget] = useState<HttpTargetConfig | null | "missing">(null);
+  const [stored, setStored] = useState<StoredTarget | null | "missing">(null);
 
   useEffect(() => {
     try {
       const raw = sessionStorage.getItem(TARGET_STORAGE_KEY);
       if (!raw) {
-        setTarget("missing");
+        setStored("missing");
         router.replace("/audit/new");
         return;
       }
-      setTarget(JSON.parse(raw) as HttpTargetConfig);
+      setStored(JSON.parse(raw) as StoredTarget);
     } catch {
-      setTarget("missing");
+      setStored("missing");
       router.replace("/audit/new");
     }
   }, [router]);
 
-  if (target === null || target === "missing") return null;
+  if (stored === null || stored === "missing") return null;
+
+  // A pasted/extracted prompt can be hardened, so prove-the-fix is enabled; an
+  // external HTTP black box cannot be hardened in place, so it isn't.
+  if (stored.kind === "prompt") {
+    return (
+      <AuditExperience
+        run={{ prompt: stored.prompt }}
+        title={stored.prompt.name || "Your bot"}
+        subtitle="live audit"
+        allowProve
+        benchmark={{ name: stored.prompt.name || "Your bot", source: stored.prompt.source }}
+      />
+    );
+  }
 
   return (
     <AuditExperience
-      run={{ target }}
-      title={target.name || "Live target"}
+      run={{ target: stored.http }}
+      title={stored.http.name || "Live target"}
       subtitle="live audit"
       allowProve={false}
+      benchmark={{ name: stored.http.name || "Live target", source: "http" }}
     />
   );
 }

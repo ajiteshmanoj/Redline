@@ -8,11 +8,16 @@ import type {
   AdaptiveTurn,
   AttackCategoryId,
   HttpTargetConfig,
+  PromptTarget,
   RoleModels,
   TargetProfile,
 } from "@/lib/types";
 
-export type AdaptiveRunConfig = { botId?: string; target?: HttpTargetConfig };
+export type AdaptiveRunConfig = {
+  botId?: string;
+  target?: HttpTargetConfig;
+  prompt?: PromptTarget;
+};
 
 export type AdaptivePhase = "idle" | "running" | "done" | "error";
 

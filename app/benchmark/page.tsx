@@ -4,6 +4,7 @@ import { SiteNav } from "@/components/site-nav";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { categoryMap } from "@/lib/attacks";
+import { YourAudits } from "@/components/benchmark/your-audits";
 import {
   BENCHMARK_SUBJECTS,
   BENCHMARK_DATE,
@@ -88,6 +89,9 @@ export default function BenchmarkPage() {
               <SubjectRow key={s.id} subject={s} rank={i + 1} />
             ))}
           </div>
+
+          {/* Real audits that opted into the benchmark (local to this device). */}
+          <YourAudits />
         </div>
 
         {/* ---------- Takeaway + methodology ---------- */}

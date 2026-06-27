@@ -20,11 +20,13 @@ import {
   Swords,
   Banknote,
   TrendingDown,
+  BarChart3,
 } from "lucide-react";
 import Link from "next/link";
 import type { AuditSummary } from "@/lib/types";
 import type { AuditState } from "./use-audit";
 import { saveReport } from "@/lib/saved-reports";
+import { addSubmission } from "@/lib/benchmark-submissions";
 import { isTransportError } from "@/lib/audit";
 import {
   aggregateExposure,
@@ -58,6 +60,7 @@ export function ReportView({
   endpoint,
   adaptiveBotId,
   financial = false,
+  benchmark,
 }: {
   targetName: string;
   state: AuditState;
@@ -68,9 +71,12 @@ export function ReportView({
   adaptiveBotId?: string;
   // Financial institution → MAS proposed guidelines are in scope (FIs only).
   financial?: boolean;
+  // When set (a real user-audited bot), shows "add to the public benchmark".
+  benchmark?: { name: string; source?: string };
 }) {
   const { summary, vulnerabilities, patches } = state;
   const [saved, setSaved] = useState(false);
+  const [added, setAdded] = useState(false);
   const [showDisclosure, setShowDisclosure] = useState(false);
   if (!summary) return null;
   const band = bandMeta[summary.band];
@@ -92,6 +98,17 @@ export function ReportView({
     });
     setSaved(true);
     setTimeout(() => setSaved(false), 2200);
+  };
+
+  const onAddToBenchmark = () => {
+    if (!benchmark) return;
+    addSubmission({
+      name: benchmark.name,
+      source: benchmark.source,
+      score: summary.score,
+      brokeOn: Array.from(new Set(vulnerabilities.map((v) => v.category))),
+    });
+    setAdded(true);
   };
 
   return (
@@ -151,6 +168,12 @@ export function ReportView({
               {saved ? <Check className="h-4 w-4 text-safe" /> : <Save className="h-4 w-4" />}
               {saved ? "Saved" : "Save report"}
             </Button>
+            {benchmark ? (
+              <Button variant="secondary" size="sm" onClick={onAddToBenchmark} disabled={added}>
+                {added ? <Check className="h-4 w-4 text-safe" /> : <BarChart3 className="h-4 w-4" />}
+                {added ? "Added to benchmark" : "Add to benchmark"}
+              </Button>
+            ) : null}
             <Button variant="secondary" size="sm" onClick={() => window.print()}>
               <Download className="h-4 w-4" /> Export PDF
             </Button>

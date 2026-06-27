@@ -118,6 +118,16 @@ export type HttpTargetConfig = {
   sessionIdField?: string;
 };
 
+// A user-supplied bot defined by its system prompt (pasted, or extracted from a
+// GitHub repo). Redline runs the real battery against this prompt on the live
+// path — exactly how the built-in bots are audited, but with no fixtures.
+export type PromptTarget = {
+  name: string;
+  systemPrompt: string;
+  // Where it came from, for honest labelling (e.g. "github:owner/repo").
+  source?: string;
+};
+
 export type Bot = {
   id: string;
   name: string;

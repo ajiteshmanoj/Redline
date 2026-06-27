@@ -3,19 +3,22 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { Loader2, Check, X, Zap, Plug, Swords } from "lucide-react";
-import type { HttpTargetConfig } from "@/lib/types";
+import { Loader2, Check, X, Zap, Plug, Swords, Globe, FileText, Github, Search } from "lucide-react";
+import type { HttpTargetConfig, PromptTarget } from "@/lib/types";
 import { Button } from "./ui/button";
 import { cn } from "@/lib/utils";
 
 export const TARGET_STORAGE_KEY = "redline.customTarget";
 
-type Preset = {
-  id: string;
-  label: string;
-  note: string;
-  config: HttpTargetConfig;
-};
+// What the /audit/custom pages read out of sessionStorage. Discriminated so a
+// pasted/extracted prompt and an HTTP endpoint share one handoff channel.
+export type StoredTarget =
+  | { kind: "http"; http: HttpTargetConfig }
+  | { kind: "prompt"; prompt: PromptTarget };
+
+type Mode = "http" | "prompt" | "github";
+
+type Preset = { id: string; label: string; note: string; config: HttpTargetConfig };
 
 const PRESETS: Preset[] = [
   {
@@ -30,8 +33,6 @@ const PRESETS: Preset[] = [
       bodyTemplate:
         '{\n  "org_id": "00000000-0000-0000-0000-000000000002",\n  "channel": "web",\n  "message": "{{message}}",\n  "stream": false\n}',
       replyPath: "reply",
-      // Enables real multi-turn for the adaptive agent (FoxDesk keeps state per
-      // conversation_id).
       sessionIdPath: "conversation_id",
       sessionIdField: "conversation_id",
     },
@@ -65,7 +66,233 @@ const PRESETS: Preset[] = [
   },
 ];
 
+const PROMPT_PLACEHOLDER = `You are Ms. Bright, the friendly assistant for BrightMinds Tuition…
+
+Paste the system prompt your bot runs on. Redline runs the full
+attack battery against it on the live path and reports where it breaks.`;
+
+const MODES: { id: Mode; label: string; icon: typeof Globe; note: string }[] = [
+  { id: "prompt", label: "Paste prompt", icon: FileText, note: "Fastest — paste your system prompt" },
+  { id: "github", label: "GitHub repo", icon: Github, note: "Find the prompt in a public repo" },
+  { id: "http", label: "HTTP endpoint", icon: Globe, note: "Audit a deployed bot live" },
+];
+
 export function CustomTargetForm() {
+  const [mode, setMode] = useState<Mode>("prompt");
+
+  return (
+    <div>
+      {/* Mode switch */}
+      <div className="mb-6 grid gap-3 sm:grid-cols-3">
+        {MODES.map((m) => (
+          <button
+            key={m.id}
+            onClick={() => setMode(m.id)}
+            className={cn(
+              "flex items-start gap-3 rounded-lg border p-4 text-left transition-colors",
+              mode === m.id
+                ? "border-redline/50 bg-redline/[0.06]"
+                : "border-border bg-white/[0.02] hover:border-white/20",
+            )}
+          >
+            <m.icon className={cn("mt-0.5 h-5 w-5 shrink-0", mode === m.id ? "text-redline" : "text-chalk-faint")} />
+            <div>
+              <p className="text-sm font-medium text-chalk">{m.label}</p>
+              <p className="mt-0.5 text-xs text-chalk-faint">{m.note}</p>
+            </div>
+          </button>
+        ))}
+      </div>
+
+      {mode === "http" ? <HttpForm /> : <PromptForm mode={mode} />}
+    </div>
+  );
+}
+
+/* --------------------------- paste / github ---------------------------- */
+
+function PromptForm({ mode }: { mode: Mode }) {
+  const router = useRouter();
+  const [name, setName] = useState("");
+  const [systemPrompt, setSystemPrompt] = useState("");
+  const [source, setSource] = useState<string | undefined>();
+  const [err, setErr] = useState<string | null>(null);
+
+  // GitHub extraction state
+  const [repo, setRepo] = useState("");
+  const [finding, setFinding] = useState(false);
+  const [candidates, setCandidates] = useState<{ path: string; prompt: string }[] | null>(null);
+
+  const find = async () => {
+    setErr(null);
+    setCandidates(null);
+    if (!repo.trim()) return setErr("Enter a public GitHub repo (owner/name or URL).");
+    setFinding(true);
+    try {
+      const res = await fetch("/api/extract-prompt", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ repo: repo.trim() }),
+      });
+      const data = await res.json();
+      if (!data.ok) {
+        setErr(data.error || "Couldn't read that repo.");
+      } else if (!data.candidates?.length) {
+        setErr("No system-prompt-looking text found. Paste it manually below.");
+      } else {
+        setCandidates(data.candidates);
+        // Pre-fill the best candidate.
+        const top = data.candidates[0];
+        setSystemPrompt(top.prompt);
+        setName(data.repo || repo.trim());
+        setSource(`github:${data.repo || repo.trim()}`);
+      }
+    } catch (e) {
+      setErr((e as Error).message);
+    } finally {
+      setFinding(false);
+    }
+  };
+
+  const go = (path: string) => {
+    setErr(null);
+    if (!systemPrompt.trim()) return setErr("A system prompt is required.");
+    const prompt: PromptTarget = {
+      name: name.trim() || "Your bot",
+      systemPrompt: systemPrompt.trim(),
+      source: source ?? (mode === "github" ? "github" : "pasted"),
+    };
+    const stored: StoredTarget = { kind: "prompt", prompt };
+    sessionStorage.setItem(TARGET_STORAGE_KEY, JSON.stringify(stored));
+    router.push(path);
+  };
+
+  return (
+    <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
+      <div className="panel grain space-y-5 p-6">
+        {mode === "github" ? (
+          <div>
+            <Field label="Public GitHub repo" hint="owner/name or a full github.com URL. Public repos only.">
+              <div className="flex gap-2">
+                <input
+                  className={inputCls}
+                  value={repo}
+                  onChange={(e) => setRepo(e.target.value)}
+                  placeholder="vercel/ai-chatbot"
+                  spellCheck={false}
+                  onKeyDown={(e) => e.key === "Enter" && find()}
+                />
+                <Button variant="secondary" onClick={find} disabled={finding} className="shrink-0">
+                  {finding ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+                  Find prompt
+                </Button>
+              </div>
+            </Field>
+
+            {candidates ? (
+              <div>
+                <p className="mono-label mb-2">
+                  Found {candidates.length} candidate{candidates.length === 1 ? "" : "s"} — pick one
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {candidates.map((c) => (
+                    <button
+                      key={c.path}
+                      onClick={() => {
+                        setSystemPrompt(c.prompt);
+                        setSource(`github:${name}/${c.path}`);
+                      }}
+                      className={cn(
+                        "rounded-md border px-2.5 py-1.5 font-mono text-[11px] transition-colors",
+                        systemPrompt === c.prompt
+                          ? "border-redline/50 bg-redline/[0.08] text-chalk"
+                          : "border-border bg-white/[0.02] text-chalk-dim hover:border-white/20",
+                      )}
+                    >
+                      {c.path}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+          </div>
+        ) : null}
+
+        <Field label="Bot name">
+          <input className={inputCls} value={name} onChange={(e) => setName(e.target.value)} placeholder="My support bot" />
+        </Field>
+
+        <Field
+          label="System prompt"
+          hint={
+            mode === "github"
+              ? "Extracted from the repo — review and edit before auditing."
+              : "Paste the exact system prompt your bot runs on."
+          }
+        >
+          <textarea
+            className={cn(inputCls, "h-60 font-mono text-xs leading-relaxed")}
+            value={systemPrompt}
+            onChange={(e) => setSystemPrompt(e.target.value)}
+            placeholder={PROMPT_PLACEHOLDER}
+            spellCheck={false}
+          />
+        </Field>
+
+        {err ? (
+          <p className="rounded-md border border-redline/40 bg-redline/[0.07] px-3 py-2 text-sm text-redline-bright">
+            {err}
+          </p>
+        ) : null}
+
+        <div className="flex flex-wrap items-center gap-3 pt-1">
+          <Button onClick={() => go("/audit/custom")} className="group">
+            <Zap className="h-4 w-4" /> Run Redline audit
+          </Button>
+          <Button onClick={() => go("/audit/custom/adaptive")} variant="outline" className="group">
+            <Swords className="h-4 w-4" /> Run adaptive agent
+          </Button>
+        </div>
+      </div>
+
+      <aside className="space-y-4">
+        <div className="panel p-5">
+          <p className="mono-label mb-3">How it works</p>
+          <ol className="space-y-3 text-sm text-chalk-dim">
+            <Step n={1}>
+              {mode === "github"
+                ? "Redline reads your public repo and finds the agent's system prompt."
+                : "You paste the system prompt your bot runs on."}
+            </Step>
+            <Step n={2}>It runs the full attack battery against that prompt on the live path.</Step>
+            <Step n={3}>A judge scores every reply — same console, report, and prove-the-fix.</Step>
+          </ol>
+        </div>
+        <div className="panel border-warn/30 bg-warn/[0.04] p-5">
+          <p className="mono-label mb-2">Needs the live path</p>
+          <p className="text-sm leading-relaxed text-chalk-dim">
+            An arbitrary prompt has no fixtures, so this runs live — set{" "}
+            <span className="font-mono text-chalk">LLM_API_KEY</span>. The built-in demo bots stay
+            network-free.
+          </p>
+        </div>
+        {mode === "github" ? (
+          <p className="px-1 text-xs leading-relaxed text-chalk-faint">
+            Auditing the extracted prompt nails prompt-only bots; for tool-using agents it&apos;s a
+            lower bound (it doesn&apos;t run their tools or RAG).
+          </p>
+        ) : null}
+        <p className="px-1 text-xs leading-relaxed text-chalk-faint">
+          Only audit bots you own or are authorised to test.
+        </p>
+      </aside>
+    </div>
+  );
+}
+
+/* ------------------------------ http form ------------------------------ */
+
+function HttpForm() {
   const router = useRouter();
   const [cfg, setCfg] = useState<HttpTargetConfig>(PRESETS[0].config);
   const [headersText, setHeadersText] = useState(JSON.stringify(PRESETS[0].config.headers, null, 2));
@@ -121,23 +348,16 @@ export function CustomTargetForm() {
     }
   };
 
-  const runAudit = () => {
+  const handoff = (path: string) => {
     const target = buildConfig();
     if (!target) return;
-    sessionStorage.setItem(TARGET_STORAGE_KEY, JSON.stringify(target));
-    router.push("/audit/custom");
-  };
-
-  const runAdaptive = () => {
-    const target = buildConfig();
-    if (!target) return;
-    sessionStorage.setItem(TARGET_STORAGE_KEY, JSON.stringify(target));
-    router.push("/audit/custom/adaptive");
+    const stored: StoredTarget = { kind: "http", http: target };
+    sessionStorage.setItem(TARGET_STORAGE_KEY, JSON.stringify(stored));
+    router.push(path);
   };
 
   return (
     <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
-      {/* form */}
       <div className="panel grain space-y-5 p-6">
         <div>
           <p className="mono-label mb-2">Start from a preset</p>
@@ -202,13 +422,11 @@ export function CustomTargetForm() {
             {test.state === "loading" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plug className="h-4 w-4" />}
             Test connection
           </Button>
-          <Button onClick={runAudit} className="group">
-            <Zap className="h-4 w-4" />
-            Run Redline audit
+          <Button onClick={() => handoff("/audit/custom")} className="group">
+            <Zap className="h-4 w-4" /> Run Redline audit
           </Button>
-          <Button onClick={runAdaptive} variant="outline" className="group">
-            <Swords className="h-4 w-4" />
-            Run adaptive agent
+          <Button onClick={() => handoff("/audit/custom/adaptive")} variant="outline" className="group">
+            <Swords className="h-4 w-4" /> Run adaptive agent
           </Button>
         </div>
 
@@ -233,7 +451,6 @@ export function CustomTargetForm() {
         ) : null}
       </div>
 
-      {/* side rail */}
       <aside className="space-y-4">
         <div className="panel p-5">
           <p className="mono-label mb-3">How it works</p>

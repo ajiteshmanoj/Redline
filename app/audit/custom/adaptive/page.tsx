@@ -2,30 +2,33 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import type { HttpTargetConfig } from "@/lib/types";
 import { AdaptiveExperience } from "@/components/adaptive-experience";
-import { TARGET_STORAGE_KEY } from "@/components/custom-target-form";
+import { TARGET_STORAGE_KEY, type StoredTarget } from "@/components/custom-target-form";
 
 export default function CustomAdaptivePage() {
   const router = useRouter();
-  const [target, setTarget] = useState<HttpTargetConfig | null | "missing">(null);
+  const [stored, setStored] = useState<StoredTarget | null | "missing">(null);
 
   useEffect(() => {
     try {
       const raw = sessionStorage.getItem(TARGET_STORAGE_KEY);
       if (!raw) {
-        setTarget("missing");
+        setStored("missing");
         router.replace("/audit/new");
         return;
       }
-      setTarget(JSON.parse(raw) as HttpTargetConfig);
+      setStored(JSON.parse(raw) as StoredTarget);
     } catch {
-      setTarget("missing");
+      setStored("missing");
       router.replace("/audit/new");
     }
   }, [router]);
 
-  if (target === null || target === "missing") return null;
+  if (stored === null || stored === "missing") return null;
 
-  return <AdaptiveExperience target={target} title={target.name || "Live target"} />;
+  if (stored.kind === "prompt") {
+    return <AdaptiveExperience prompt={stored.prompt} title={stored.prompt.name || "Your bot"} />;
+  }
+
+  return <AdaptiveExperience target={stored.http} title={stored.http.name || "Live target"} />;
 }
