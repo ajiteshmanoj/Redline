@@ -256,7 +256,7 @@ export default function LandingPage() {
       </Section>
 
       {/* ===================== WHO IT'S FOR ===================== */}
-      <section id="who" className="scroll-mt-20 border-y border-border bg-ink-900/60 py-24">
+      <section id="who" className="scroll-mt-20 py-24">
         <div className="container grid gap-12 lg:grid-cols-2">
           <div>
             <SectionHeading
@@ -298,9 +298,11 @@ export default function LandingPage() {
       </section>
 
       {/* ===================== FINAL CTA (dark close) ===================== */}
-      <section className="relative overflow-hidden bg-night py-32 text-white">
+      <section className="relative overflow-hidden bg-night pb-32 pt-44 text-white">
+        {/* smooth fade: cream page dissolves into the dark band */}
+        <div className="pointer-events-none absolute inset-x-0 top-0 z-[1] h-56 bg-gradient-to-b from-ink via-ink/70 to-transparent" />
         <DotField tone="dark" className="opacity-90" />
-        <div className="absolute inset-0 -z-0 bg-[radial-gradient(620px_320px_at_50%_0%,rgba(194,14,46,0.22),transparent_70%)]" />
+        <div className="absolute inset-0 -z-0 bg-[radial-gradient(620px_320px_at_50%_10%,rgba(194,14,46,0.22),transparent_70%)]" />
         <div className="container relative z-10 text-center">
           <Reveal>
             <h2 className="mx-auto max-w-3xl font-display text-4xl font-semibold tracking-tight sm:text-6xl">
