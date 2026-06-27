@@ -29,7 +29,8 @@ Every finding maps to the **OWASP LLM Top 10 (2025)**, Singapore's **PDPA**, and
 | UI | React 18, Tailwind CSS 3.4, Framer Motion 11, Lucide icons |
 | Type / motion | **Fraunces** editorial serif (display), Inter (body), JetBrains Mono (transcripts); CSS + Framer animations |
 | Backend | Next.js API routes (Node runtime): `/api/audit`, `/api/adaptive`, `/api/probe`, `/api/sample-bot` |
-| LLM | Provider-agnostic abstraction (`lib/llm.ts`); default OpenAI `gpt-4o-mini`; any OpenAI-compatible endpoint; per-role models |
+| LLM | **OpenAI** engine via `lib/llm.ts`: reasoning attacker `gpt-5.5`, Structured-Outputs judge `gpt-5.4`, target `gpt-4.1-mini` (per-role); OpenAI-compatible + provider-agnostic |
+| Search | **Exa** neural web search (`lib/exa.ts`) for real-world recon on the target company |
 | Storage | Browser `localStorage` (no backend database) |
 | Deploy | Vercel; `.env.production` pins `DEMO_MODE=true` for a network-free public demo |
 
@@ -41,15 +42,17 @@ A **light, editorial, security-edge** aesthetic:
 - **Signature hero:** an auto-playing **live interrogation** — the adversarial agent types an attack, the bot replies, and a verdict slams in (`Broken · sev` red / `Held · safe` green), including a round that holds so it reads honest.
 - **Living backgrounds:** an animated dot-matrix scan field, varied section treatments, and a dramatic dark closing band + oversized wordmark footer.
 
-## The Engine — three AIs, adversarial by design
+## The Engine — three OpenAI roles, adversarial by design
 
-Redline is not one model talking to itself. Three roles, each distinct (surfaced in the landing "engine" section and the per-run model roster):
+Redline is not one model talking to itself. **OpenAI is the engine, used three ways at once** (surfaced in the landing "engine" section and the per-run model roster):
 
-- **Attacker** — generates and escalates adversarial prompts. In the adaptive mode it profiles the target first, then pursues a goal over up to 5 turns, reading each reply and adapting.
-- **Judge** — a **separate low-temperature call** that scores every response as strict JSON `{ broken, severity, reason }`. It never sees its own attacks, so the verdict isn't a model grading its own homework. Parsed defensively, with a heuristic fallback when no key is present.
-- **Target** — the bot under test: a built-in demo bot, or any external chatbot reached as a black box over HTTP.
+- **Attacker** — a **reasoning model (`gpt-5.5`)** that generates and escalates adversarial prompts. In the adaptive mode it profiles the target first, then pursues a goal over up to 5 turns, reading each reply and adapting.
+- **Judge** — a **separate call (`gpt-5.4`)** that scores every response with **Structured Outputs** (strict `json_schema`): `{ broken, severity, reason }`. It never sees its own attacks, so the verdict isn't a model grading its own homework. Parsed defensively, with a heuristic fallback when no key is present.
+- **Target** — the bot under test (`gpt-4.1-mini` for built-ins): a built-in demo bot, or any external chatbot reached as a black box over HTTP.
 
-All calls flow through a single `runAgent()` (`lib/llm.ts`). Swap providers via env; run a stronger attacker than judge with per-role models (`LLM_MODEL_ATTACKER` / `_JUDGE` / `_TARGET`).
+**Real-world recon via Exa.** Before the adaptive agent attacks, it searches the live web (Exa neural search) for the target company, then the OpenAI attacker distills the results — Structured Outputs again — into named competitors and the personal-data types the business holds, which it weaponises into disparagement bait and PII pretexts. Exa finds the truth on the open web; OpenAI turns it into an attack plan. Gated on `EXA_API_KEY`; bot-only recon (or a captured demo fixture) when absent. See `lib/exa.ts` + `osintRecon` in `lib/adaptive.ts`.
+
+All LLM calls flow through a single `runAgent()` (`lib/llm.ts`) — the OpenAI Chat Completions shape, so it's also provider-agnostic. Run a stronger attacker than judge with per-role models (`LLM_MODEL_ATTACKER` / `_JUDGE` / `_TARGET`).
 
 ## Architecture
 
@@ -152,7 +155,8 @@ Env: `DEMO_MODE`, `LLM_API_KEY`, `LLM_BASE_URL`, `LLM_MODEL` (+ optional per-rol
 - ✅ **Redline Watch** — monitoring dashboard, sparklines, regression alert, CI snippet
 - ✅ **Benchmark** — State of AI Agent Security 2026 (build-pattern archetypes, A–F), **fed by real audits** you submit ("Add to benchmark" → "Your audits")
 - ✅ **Audit your own bot** — paste a system prompt, connect a public GitHub repo (`/api/extract-prompt` finds the prompt), or an HTTP endpoint; all run the real battery live
-- ✅ **Engine section** — attacker/judge/target, separate-judge design, provider-agnostic
+- ✅ **Exa real-world recon** — adaptive agent searches the live web for the target company, OpenAI distills it (Structured Outputs) into real competitors + data types it then attacks with
+- ✅ **Engine section** — OpenAI reasoning attacker / Structured-Outputs judge / target, separate-judge design
 - ✅ Accurate standards mapping — OWASP (all) + PDPA (data) + MAS (proposed, FI-only), text badges + non-affiliation disclaimer
 - ✅ Honesty layer — independent control bot, reachability guard, varied transcripts
 - ✅ Responsible disclosure (PII redaction), saved reports, custom targets

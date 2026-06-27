@@ -24,19 +24,19 @@ const ENGINE_ROLES = [
   {
     icon: Crosshair,
     title: "The attacker",
-    role: "adversarial agent",
-    body: "Generates and escalates real attacks. In the multi-turn mode it profiles the target first, then pursues a goal over up to five turns — reading each reply and adapting.",
+    role: "OpenAI reasoning model · gpt-5.5",
+    body: "An OpenAI reasoning model generates and escalates real attacks. In the multi-turn mode it profiles the target first — searching the live web with Exa — then pursues a goal over up to five turns, reading each reply and adapting.",
   },
   {
     icon: Gavel,
     title: "The judge",
-    role: "independent evaluator",
-    body: "A separate low-temperature call scores every response as strict JSON — broken, severity, reason. It never sees its own attacks, so the verdict isn't a model marking its own homework.",
+    role: "OpenAI · Structured Outputs · gpt-5.4",
+    body: "A separate OpenAI call scores every response with Structured Outputs — strict broken / severity / reason. It never sees its own attacks, so the verdict isn't a model marking its own homework.",
   },
   {
     icon: Bot,
     title: "The target",
-    role: "bot under test",
+    role: "bot under test · gpt-4.1-mini",
     body: "Your bot, or any external chatbot reached over HTTP as a black box. Redline drives it exactly as a real user would and judges the actual responses it gives.",
   },
 ];
@@ -250,9 +250,9 @@ export default function LandingPage() {
       {/* ===================== THE ENGINE ===================== */}
       <Section id="engine">
         <SectionHeading
-          eyebrow="The engine"
-          title="Three AIs, adversarial by design."
-          sub="Redline isn't one model talking to itself. An attacker, a separate judge, and the target each play a distinct role — that separation is what makes the verdict credible."
+          eyebrow="The engine · powered by OpenAI"
+          title="Three OpenAI roles, adversarial by design."
+          sub="Redline isn't one model talking to itself. A reasoning-model attacker, a separate Structured-Outputs judge, and the target each play a distinct OpenAI role — that separation is what makes the verdict credible."
         />
         <div className="mt-12 grid gap-5 md:grid-cols-3">
           {ENGINE_ROLES.map((r, i) => (
@@ -275,23 +275,26 @@ export default function LandingPage() {
             <div className="flex items-start gap-3">
               <Layers className="mt-0.5 h-5 w-5 shrink-0 text-redline" />
               <div>
-                <p className="font-display text-base font-semibold">Provider-agnostic by design.</p>
+                <p className="font-display text-base font-semibold">
+                  OpenAI for the brains, Exa for the eyes.
+                </p>
                 <p className="mt-1 max-w-2xl text-sm leading-relaxed text-chalk-dim">
-                  Every call flows through one abstraction. Default model is{" "}
-                  <span className="font-mono text-chalk">gpt-4o-mini</span>; point it at any
-                  OpenAI-compatible endpoint, and run a stronger attacker than judge with per-role
-                  models. The judge always runs as a <span className="text-chalk">separate
-                  low-temperature call</span> returning strict JSON — no model grades its own work.
+                  A reasoning model attacks; a separate model judges with{" "}
+                  <span className="text-chalk">Structured Outputs</span>; before each engagement{" "}
+                  <span className="text-chalk">Exa</span> searches the live web for the target
+                  company and OpenAI distills it into real competitors and data types to attack
+                  with. Per-role models run a stronger attacker than judge — and it&apos;s
+                  provider-agnostic under the hood (any OpenAI-compatible endpoint).
                 </p>
               </div>
             </div>
             <div className="flex shrink-0 flex-wrap gap-2">
-              {["attacker", "judge", "target"].map((m) => (
+              {["gpt-5.5 attacker", "gpt-5.4 judge", "exa recon"].map((m) => (
                 <span
                   key={m}
                   className="inline-flex items-center rounded-md border border-border bg-white/[0.02] px-2.5 py-1 font-mono text-[11px] uppercase tracking-wider text-chalk-dim"
                 >
-                  {m} model
+                  {m}
                 </span>
               ))}
             </div>

@@ -4,6 +4,7 @@ import {
   ADAPTIVE_GOALS,
   MAX_TURNS,
   httpResponder,
+  profileForAttacker,
   profileTarget,
   runAdaptiveCampaign,
   summarizeAdaptive,
@@ -28,10 +29,13 @@ async function runLiveCampaigns(
   summaryId: string,
   respond: TargetResponder,
   send: (event: AdaptiveEvent) => void,
+  companyName?: string,
 ): Promise<void> {
-  // Recon first: profile the target, then tailor every attack to it.
-  const profile = await profileTarget(respond);
+  // Recon first: profile the bot AND search the real web (Exa) for the company,
+  // then tailor every attack to what we learned.
+  const profile = await profileTarget(respond, { companyName });
   send({ type: "recon", profile });
+  const brief = profileForAttacker(profile);
 
   const campaigns: AdaptiveCampaign[] = [];
   for (const goal of ADAPTIVE_GOALS) {
@@ -44,7 +48,7 @@ async function runLiveCampaigns(
     });
     const campaign = await runAdaptiveCampaign(goal, respond, {
       maxTurns: MAX_TURNS,
-      profile: profile.summary,
+      profile: brief,
       onTurn: (turn) => send({ type: "turn", goalId: goal.id, turn }),
     });
     campaigns.push(campaign);
@@ -87,7 +91,7 @@ export async function POST(req: NextRequest) {
           models: { attacker: modelFor("attacker"), judge: modelFor("judge") },
         });
         try {
-          await runLiveCampaigns(name, httpResponder(target), send);
+          await runLiveCampaigns(name, httpResponder(target), send, name);
         } catch (err) {
           return fail((err as Error).message);
         }
@@ -110,7 +114,7 @@ export async function POST(req: NextRequest) {
           models: { attacker: modelFor("attacker"), target: modelFor("target"), judge: modelFor("judge") },
         });
         try {
-          await runLiveCampaigns(name, systemPromptResponder(prompt.systemPrompt), send);
+          await runLiveCampaigns(name, systemPromptResponder(prompt.systemPrompt), send, name);
         } catch (err) {
           return fail((err as Error).message);
         }
@@ -169,7 +173,12 @@ export async function POST(req: NextRequest) {
         }
 
         // ----- Live multi-turn campaigns -----
-        await runLiveCampaigns(bot.id, systemPromptResponder(bot.systemPrompt), send);
+        await runLiveCampaigns(
+          bot.id,
+          systemPromptResponder(bot.systemPrompt),
+          send,
+          bot.business || bot.name,
+        );
       } catch (err) {
         controller.enqueue(
           encoder.encode(JSON.stringify({ type: "error", message: (err as Error).message }) + "\n"),

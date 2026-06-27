@@ -40,3 +40,4 @@ network). Light editorial UI.
 - 2026-06-26 16:15 · Ground standards mapping in reality + surface the AI engine (c6d783d)
 - 2026-06-26 17:04 · Self-serve audits: paste a prompt or connect a GitHub repo + submission-fed benchmark (475eabe)
 - 2026-06-27 10:35 · Transparency pass: rubric-driven score (no flat 100), exposure itemisation, PDPA hero (139623a)
+- 2026-06-27 10:42 · Update SESSION_LOG (564e44f)

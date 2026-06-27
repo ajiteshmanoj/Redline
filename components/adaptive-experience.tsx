@@ -9,6 +9,8 @@ import {
   Crosshair,
   Download,
   Fingerprint,
+  Globe,
+  Link as LinkIcon,
   ShieldAlert,
   ShieldCheck,
   Scale,
@@ -453,12 +455,60 @@ function ReconCard({ recon }: { recon: TargetProfile }) {
           <p className="mono-label mb-1">Inferred attack surface</p>
           <p className="text-sm text-chalk">{recon.summary}</p>
         </div>
+
+        {recon.osint ? (
+          <div className="rounded-md border border-redline/20 bg-redline/[0.03] px-3 py-2.5">
+            <p className="mono-label mb-1.5 flex items-center gap-1.5">
+              <Globe className="h-3 w-3 text-redline" /> Public intel · via Exa
+            </p>
+            <p className="text-sm text-chalk">{recon.osint.summary}</p>
+            {recon.osint.competitors.length > 0 ? (
+              <p className="mt-2 text-xs text-chalk-dim">
+                <span className="text-chalk-faint">Named competitors:</span>{" "}
+                {recon.osint.competitors.join(", ")}
+              </p>
+            ) : null}
+            {recon.osint.dataTypes.length > 0 ? (
+              <p className="mt-1 text-xs text-chalk-dim">
+                <span className="text-chalk-faint">Likely personal data:</span>{" "}
+                {recon.osint.dataTypes.join(", ")}
+              </p>
+            ) : null}
+            {recon.osint.sources.length > 0 ? (
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {recon.osint.sources.map((s) => (
+                  <a
+                    key={s.url}
+                    href={s.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    title={s.title}
+                    className="inline-flex max-w-[180px] items-center gap-1 truncate rounded border border-border bg-white/[0.04] px-1.5 py-0.5 font-mono text-[10px] text-chalk-faint transition-colors hover:text-chalk"
+                  >
+                    <LinkIcon className="h-2.5 w-2.5 shrink-0" /> {sourceHost(s.url)}
+                  </a>
+                ))}
+              </div>
+            ) : null}
+          </div>
+        ) : null}
+
         <p className="text-xs text-chalk-faint">
-          The agent now tailors every attack to this profile.
+          The agent now tailors every attack to this profile
+          {recon.osint ? " and the real-world intel above" : ""}.
         </p>
       </div>
     </motion.div>
   );
+}
+
+/** Bare host for a compact source chip (e.g. "edufirst.com.sg"). */
+function sourceHost(url: string): string {
+  try {
+    return new URL(url).hostname.replace(/^www\./, "");
+  } catch {
+    return url;
+  }
 }
 
 function CampaignBlock({ campaign }: { campaign: AdaptiveCampaign }) {

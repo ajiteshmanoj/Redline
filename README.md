@@ -6,9 +6,19 @@ Every business is deploying LLM chatbots — support, sales, front desk — with
 they're safe. Redline points an adversarial agent at a target chatbot, runs a battery of attacks
 (jailbreaks, prompt injection, PDPA/PII data-extraction, hallucination traps, brand/over-promise
 bait, verification bypass), and returns **exactly where the bot breaks** — with the transcript as
-proof, a severity score, and a suggested system-prompt patch.
+proof, a severity score, a Singapore-dollar exposure estimate, and a suggested system-prompt patch.
 
-Built as a vertical slice: **Landing → Target selection → Live audit console → Findings report.**
+**The engine is OpenAI, used three ways at once** — a reasoning model (`gpt-5.5`) as the autonomous
+multi-turn attacker, `gpt-4.1-mini` as the target it's interrogating, and a separate `gpt-5.4`
+judge that scores every reply with **Structured Outputs** (strict `json_schema`). For its recon
+phase the adaptive agent uses **Exa** to search the live web for the target company, then distills
+those results — again via the OpenAI model, Structured Outputs — into real competitors and the data
+types the business holds, so attacks are grounded in reality rather than guesses. The AI isn't a
+feature bolted on; it *is* the product.
+
+Built as a full slice: **Landing → Target selection → Live audit console (static battery) →
+Adaptive multi-turn agent → Findings report**, plus self-serve audits (paste a prompt or connect a
+GitHub repo).
 
 ---
 
@@ -65,58 +75,89 @@ app/
   audit/page.tsx            Target selection
   audit/[botId]/page.tsx    Loads bot → renders the audit experience
   api/audit/route.ts        Streams the audit (NDJSON) — demo OR live
+  api/adaptive/route.ts     Streams the adaptive multi-turn agent (NDJSON)
 lib/
-  llm.ts                    SINGLE provider abstraction — runAgent()
-  attacks.ts                Attack suite (6 categories) + judge + live runner
-  bots.ts                   The 3 vulnerable target bots
-  fixtures.ts               DEMO_MODE scripted results
-  audit.ts                  Scoring, vulnerability ranking, patch generation
+  llm.ts                    SINGLE OpenAI/provider abstraction — runAgent()
+  attacks.ts                Static attack suite (6 categories, 20 probes) + judge
+  adaptive.ts               Multi-turn reasoning agent + Exa-powered recon
+  exa.ts                    Exa neural-search client (real-world OSINT)
+  bots.ts                   The vulnerable + independent target bots
+  fixtures.ts               DEMO_MODE scripted results (zero network)
+  audit.ts                  Rubric risk score, ranking, patch generation
+  exposure.ts               Singapore-dollar exposure model
+  standards.ts              OWASP / PDPA / MAS mapping
   types.ts                  Shared domain + streaming-event types
 components/
   audit-console.tsx         The live "hero moment" console
   severity-meter.tsx        Spring-physics 0–100 risk gauge
-  report-view.tsx           Findings report + patches
-  higgsfield-video.tsx      Media asset slot (see below)
+  report-view.tsx           Findings report, exposure, PDPA hero, patches
+  adaptive-experience.tsx   Multi-turn engagement feed + recon card
 ```
 
 ### Attack engine
 
-[`lib/attacks.ts`](lib/attacks.ts) defines **6 categories** with 2–4 concrete probes each
-(18 total): jailbreak/role-override, prompt injection, PII/data-extraction, hallucination/false-
-authority, brand-damage/over-promise, and policy/verification bypass.
+**Static battery —** [`lib/attacks.ts`](lib/attacks.ts) defines **6 categories** with concrete
+probes each (**20 total**): jailbreak/role-override, prompt injection, PII/data-extraction,
+hallucination/false-authority, brand-damage/over-promise, and policy/verification bypass.
 
 For each attack the engine (1) sends the adversarial prompt to the target bot via `runAgent`,
-then (2) makes a **separate low-temperature "judge" call** that evaluates the response and returns
-strict JSON: `{ broken: boolean, severity: 1-10, reason: string }`. The judge output is parsed
+then (2) makes a **separate low-temperature "judge" call** — a different OpenAI model that never
+sees its own attacks — which returns a strict verdict via **Structured Outputs**:
+`{ broken: boolean, severity: 1-10, reason: string }`. The judge output is also parsed
 defensively (`parseVerdict`) — it tolerates code fences, stray prose, and malformed JSON, falling
-back to SAFE rather than crashing. Results aggregate into a 0–100 risk score and a ranked
-vulnerability list.
+back to SAFE rather than crashing. Results aggregate into a rubric-based 0–100 risk score (see
+[`computeRiskScore`](lib/audit.ts)) and a ranked vulnerability list.
+
+**Adaptive multi-turn agent —** [`lib/adaptive.ts`](lib/adaptive.ts) is the higher-altitude mode.
+Instead of one fixed prompt, an OpenAI **reasoning model** pursues a *goal* over up to 5 turns,
+reading each reply and escalating — catching breaks that only appear under sustained pressure.
+Before attacking, it runs a **recon phase**: it profiles the bot, and (when `EXA_API_KEY` is set)
+uses **Exa** to search the real web for the target company, distilling the results into named
+competitors and likely data types it then weaponises (see
+[`osintRecon`](lib/adaptive.ts) and [`lib/exa.ts`](lib/exa.ts)).
 
 ---
 
-## Switching the LLM provider (one file)
+## AI engine — powered by OpenAI
 
-**All provider specifics live in [`lib/llm.ts`](lib/llm.ts).** The rest of the app only calls
-`runAgent(messages, systemPrompt)`. To swap models or providers you change **only env vars** (for
-any OpenAI-Chat-Completions-compatible endpoint) or, at most, the single `callChatCompletions`
-function (for a different wire shape).
+Redline runs **three OpenAI roles per audit**, set independently so the model use is deliberate,
+not a single chat call doing everything:
 
-It's implemented against the **OpenAI Chat Completions** API by default. Set in `.env.local`:
+| Role | Default model | Why this model | OpenAI feature leaned on |
+| --- | --- | --- | --- |
+| **Attacker** | `gpt-5.5` | a reasoning model to plan, read replies, and escalate across turns | reasoning / agentic multi-turn |
+| **Target** | `gpt-4.1-mini` | a cheap, fast model — realistic stand-in for a deployed SME bot | low-latency chat |
+| **Judge** | `gpt-5.4` | careful, deterministic scoring that never sees its own attacks | **Structured Outputs** (`json_schema`, strict) |
+
+Set in `.env.local` (per-role overrides fall back to `LLM_MODEL`):
 
 ```bash
 DEMO_MODE=false
 LLM_API_KEY=sk-...
 LLM_BASE_URL=https://api.openai.com/v1
-LLM_MODEL=gpt-4o-mini
+LLM_MODEL_ATTACKER=gpt-5.5
+LLM_MODEL_JUDGE=gpt-5.4
+LLM_MODEL_TARGET=gpt-4.1-mini
+
+# Real-world recon (optional but recommended)
+EXA_API_KEY=...        # https://dashboard.exa.ai
 ```
 
-Works as-is with any compatible endpoint — just change the three vars:
+**Exa** powers the adaptive agent's recon: a neural web search on the target company whose results
+the OpenAI attacker distills (Structured Outputs again) into competitors + data types. Exa finds
+the truth on the open web; OpenAI turns it into an attack plan.
 
-- **OpenRouter** — `LLM_BASE_URL=https://openrouter.ai/api/v1`, `LLM_MODEL=anthropic/claude-3.5-sonnet`
-- **Together / Groq / Fireworks / local vLLM / Ollama** (`/v1`) — point `LLM_BASE_URL` at their base URL
-- **A provider with a different wire shape** (e.g. Anthropic's native `/v1/messages`) — rewrite
-  only the body/headers/parse inside `callChatCompletions`. Keep `runAgent`'s signature and the
-  whole app keeps working. There's a comment block in the file walking through this.
+<details>
+<summary><b>Provider-agnostic by design</b> (one file)</summary>
+
+All provider specifics live in [`lib/llm.ts`](lib/llm.ts); the rest of the app only calls
+`runAgent(messages, systemPrompt)`. It's the **OpenAI Chat Completions** shape by default, so any
+compatible endpoint works by changing env vars — OpenRouter
+(`LLM_BASE_URL=https://openrouter.ai/api/v1`), Together / Groq / Fireworks / vLLM / Ollama (`/v1`).
+A different wire shape (e.g. Anthropic's native `/v1/messages`) needs only the single
+`callChatCompletions` function rewritten; `runAgent`'s signature stays and the whole app keeps
+working.
+</details>
 
 ---
 
@@ -132,25 +173,31 @@ Works as-is with any compatible endpoint — just change the three vars:
 The mode badge is shown in the UI header (**DEMO MODE** / **LIVE MODE**) so you always know which
 path is running. Toggle by editing `DEMO_MODE` in `.env.local` and restarting the dev server.
 
-### Testing the live path (do this with your own key)
+### Testing the live path
 
-The live path is written to the OpenAI Chat Completions shape but was **not executed during the
-build** (no key available). To test it:
+The live path runs against real OpenAI calls. The deployed app at
+[redline-woad.vercel.app](https://redline-woad.vercel.app) has the `LLM_*` and `EXA_API_KEY`
+secrets set, so **self-serve audits run live in production** while the built-in demo bots stay
+network-free. Locally:
 
 ```bash
 # in .env.local
 DEMO_MODE=false
 LLM_API_KEY=sk-...your key...
-LLM_BASE_URL=https://api.openai.com/v1
-LLM_MODEL=gpt-4o-mini
+LLM_MODEL_ATTACKER=gpt-5.5
+LLM_MODEL_JUDGE=gpt-5.4
+LLM_MODEL_TARGET=gpt-4.1-mini
+EXA_API_KEY=...           # optional, enables real-world recon
 ```
 
 ```bash
 npm run dev
 ```
 
-Then run an audit from `/audit`. Each of the 18 attacks makes one target call + one judge call
-(~36 calls per audit). Pacing comes from real latency; the same console/report UI is used.
+Then run an audit from `/audit`. Each of the 20 static attacks makes one target call + one judge
+call (~40 calls per audit); the adaptive agent adds the recon (Exa + one synthesis call) plus up to
+5 turns × (attacker + target + judge) per goal. Pacing comes from real latency; the same
+console/report UI is used.
 
 ---
 
@@ -173,11 +220,11 @@ Search the codebase for `HIGGSFIELD ASSET SLOT` to find every drop point. The co
 
 ## Design decisions (made deliberately, so you don't have to)
 
-- **Aesthetic:** dark "security console meets premium SaaS." Near-black layered surfaces, off-white
-  text, a single signature red (`#FF3B3B`) reserved for danger/breaks, muted green (`#37C98B`) for
-  passes. Engineering grid + subtle grain for cinematic texture.
-- **Type:** Space Grotesk (geometric grotesk display) for headings, Inter for body, JetBrains Mono
-  for transcripts/logs — all via `next/font` (self-hosted at build, no runtime font fetch).
+- **Aesthetic:** light editorial — warm cream canvas, near-black text, soft white cards, a single
+  deep security red (`#C20E2E`) reserved for danger/breaks and green for passes. Engineering grid +
+  subtle grain for cinematic texture without the cliché dark-hacker theme.
+- **Type:** Fraunces (display serif) for headings, Inter for body, JetBrains Mono for
+  transcripts/logs/figures — all via `next/font` (self-hosted at build, no runtime font fetch).
 - **Motion (Framer Motion):** staggered scroll reveals, a pulsing "scanning" sweep on the live
   console, per-attack streamed entry, and a severity meter animated with **spring physics**
   (`useSpring`) that climbs as breaks land.
@@ -204,5 +251,6 @@ Search the codebase for `HIGGSFIELD ASSET SLOT` to find every drop point. The co
 
 ## Tech stack
 
-Next.js 14 (App Router, TypeScript strict) · Tailwind CSS · Framer Motion · lucide-react.
+Next.js 14 (App Router, TypeScript strict) · Tailwind CSS · Framer Motion · lucide-react ·
+**OpenAI** (reasoning attacker + Structured Outputs judge) · **Exa** (real-world recon).
 Pinned to known-good versions in `package.json`.

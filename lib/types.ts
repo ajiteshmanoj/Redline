@@ -288,10 +288,28 @@ export type PromptPatch = {
 // writes its own messages each turn to achieve this).
 // Recon: the agent profiles the target before attacking, then tailors its
 // attacks to that specific bot (what data/actions it appears to have).
+// Real-world intel gathered by Exa (neural web search) about the target
+// company, distilled by the OpenAI attacker model into an attack surface. Only
+// present on live runs with EXA_API_KEY set (or replayed from a demo fixture).
+export type OsintProfile = {
+  // One-line public-web profile of the company.
+  summary: string;
+  // Named competitors → sharper disparagement / price-match bait.
+  competitors: string[];
+  // Personal data the business likely holds → targeted PII/PDPA pretexts.
+  dataTypes: string[];
+  // The sources the intel was drawn from (shown for traceability).
+  sources: { title: string; url: string }[];
+};
+
 export type TargetProfile = {
   probe: string; // the benign opener the agent sent
   reply: string; // the bot's reply
   summary: string; // the agent's inferred profile (role · data · actions · sector)
+  // Public-web intel (via Exa) about the real company behind the bot, when
+  // available. Lets the agent ground attacks in reality, not just the bot's
+  // self-description.
+  osint?: OsintProfile;
 };
 
 export type AdaptiveGoal = {
