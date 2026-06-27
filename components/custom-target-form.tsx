@@ -87,6 +87,7 @@ export function CustomTargetForm() {
         {MODES.map((m) => (
           <button
             key={m.id}
+            data-tour={`mode-${m.id}`}
             onClick={() => setMode(m.id)}
             className={cn(
               "flex items-start gap-3 rounded-lg border p-4 text-left transition-colors",
@@ -359,7 +360,7 @@ function HttpForm() {
   return (
     <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
       <div className="panel grain space-y-5 p-6">
-        <div>
+        <div data-tour="foxdesk">
           <p className="mono-label mb-2">Start from a preset</p>
           <div className="flex flex-wrap gap-2">
             {PRESETS.map((p) => (
@@ -422,7 +423,7 @@ function HttpForm() {
             {test.state === "loading" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plug className="h-4 w-4" />}
             Test connection
           </Button>
-          <Button onClick={() => handoff("/audit/custom")} className="group">
+          <Button data-tour="run-audit" onClick={() => handoff("/audit/custom")} className="group">
             <Zap className="h-4 w-4" /> Run Redline audit
           </Button>
           <Button onClick={() => handoff("/audit/custom/adaptive")} variant="outline" className="group">

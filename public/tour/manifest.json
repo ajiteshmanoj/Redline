@@ -1,0 +1,51 @@
+{
+  "voiceId": "pNInz6obpgDQGcFmaJgB",
+  "model": "eleven_multilingual_v2",
+  "clips": [
+    {
+      "id": "hero",
+      "chars": 154,
+      "bytes": 165973
+    },
+    {
+      "id": "live-break",
+      "chars": 168,
+      "bytes": 181020
+    },
+    {
+      "id": "pipeline",
+      "chars": 283,
+      "bytes": 321454
+    },
+    {
+      "id": "roles",
+      "chars": 119,
+      "bytes": 116236
+    },
+    {
+      "id": "standards",
+      "chars": 177,
+      "bytes": 234937
+    },
+    {
+      "id": "foxdesk-open",
+      "chars": 132,
+      "bytes": 157196
+    },
+    {
+      "id": "foxdesk-config",
+      "chars": 176,
+      "bytes": 207769
+    },
+    {
+      "id": "foxdesk-run",
+      "chars": 69,
+      "bytes": 85725
+    },
+    {
+      "id": "foxdesk-result",
+      "chars": 155,
+      "bytes": 187707
+    }
+  ]
+}

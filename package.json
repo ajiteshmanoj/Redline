@@ -7,7 +7,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "tour:audio": "node scripts/gen-narration.mjs"
   },
   "dependencies": {
     "@react-three/fiber": "^8.15.19",

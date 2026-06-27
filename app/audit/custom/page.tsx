@@ -41,12 +41,14 @@ export default function CustomAuditPage() {
   }
 
   return (
-    <AuditExperience
-      run={{ target: stored.http }}
-      title={stored.http.name || "Live target"}
-      subtitle="live audit"
-      allowProve={false}
-      benchmark={{ name: stored.http.name || "Live target", source: "http" }}
-    />
+    <div data-tour="result">
+      <AuditExperience
+        run={{ target: stored.http }}
+        title={stored.http.name || "Live target"}
+        subtitle="live audit"
+        allowProve={false}
+        benchmark={{ name: stored.http.name || "Live target", source: "http" }}
+      />
+    </div>
   );
 }

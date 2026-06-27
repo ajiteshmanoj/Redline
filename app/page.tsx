@@ -3,7 +3,7 @@
 import { Fragment } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { ArrowRight, ShieldCheck, Scale, Zap, Check, Crosshair, Gavel, Bot, Layers, Globe, ListChecks, Lock, Landmark } from "lucide-react";
+import { ArrowRight, ShieldCheck, Scale, Zap, Check, Crosshair, Gavel, Bot, Layers, Globe, ListChecks, Lock, Landmark, Play } from "lucide-react";
 import { SiteNav } from "@/components/site-nav";
 import { STANDARDS_CARDS, NON_AFFILIATION, type StandardKind } from "@/lib/standards";
 import { Button } from "@/components/ui/button";
@@ -91,6 +91,7 @@ export default function LandingPage() {
             </motion.div>
 
             <motion.h1
+              data-tour="hero"
               initial="hidden"
               animate="show"
               variants={fadeUp}
@@ -135,6 +136,16 @@ export default function LandingPage() {
                   See how it works
                 </Button>
               </Link>
+              <button
+                type="button"
+                onClick={() => window.dispatchEvent(new Event("redline:tour"))}
+                className="inline-flex items-center gap-2 text-sm font-medium text-chalk-dim transition-colors hover:text-redline"
+              >
+                <span className="flex h-7 w-7 items-center justify-center rounded-full border border-redline/30 bg-redline/[0.06] text-redline">
+                  <Play className="h-3 w-3 fill-current" />
+                </span>
+                Watch the guided demo
+              </button>
             </motion.div>
 
             <motion.p
@@ -244,7 +255,9 @@ export default function LandingPage() {
             </div>
           </Reveal>
           <Reveal delay={1}>
-            <HeroConsole />
+            <div data-tour="live-break">
+              <HeroConsole />
+            </div>
           </Reveal>
         </div>
       </Section>
@@ -285,7 +298,7 @@ export default function LandingPage() {
 
           {/* ---- Flow ribbon: the layers, left to right ---- */}
           <Reveal>
-            <div className="mt-12">
+            <div className="mt-12" data-tour="pipeline">
               <div className="flex flex-col items-stretch gap-2.5 sm:flex-row sm:items-stretch">
                 {PIPELINE.map((p, i) => (
                   <Fragment key={p.stage}>
@@ -317,7 +330,7 @@ export default function LandingPage() {
           </Reveal>
 
           {/* ---- Detailed role cards ---- */}
-          <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-4" data-tour="roles">
             {ENGINE_ROLES.map((r, i) => (
               <Reveal key={r.title} delay={i}>
                 <div className="panel h-full p-6">
@@ -379,7 +392,7 @@ export default function LandingPage() {
             title="Graded against the standards your auditors already use."
             sub="Every finding is mapped to a recognised framework — so a result isn't Redline's opinion, it's a citation."
           />
-          <div className="mt-12 grid gap-5 md:grid-cols-3">
+          <div className="mt-12 grid gap-5 md:grid-cols-3" data-tour="standards">
             {STANDARDS_CARDS.map((c, i) => {
               const Icon = STANDARD_ICON[c.kind];
               return (
