@@ -1,0 +1,173 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    color-scheme: light;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  @keyframes aurora-a {
+    0%, 100% { transform: translate(0, 0) scale(1); }
+    50% { transform: translate(18%, 12%) scale(1.18); }
+  }
+  @keyframes aurora-b {
+    0%, 100% { transform: translate(0, 0) scale(1.1); }
+    50% { transform: translate(-14%, 16%) scale(0.92); }
+  }
+  @keyframes aurora-c {
+    0%, 100% { transform: translate(0, 0) scale(1); }
+    50% { transform: translate(10%, -14%) scale(1.22); }
+  }
+  @keyframes marquee {
+    from { transform: translateX(0); }
+    to { transform: translateX(-100%); }
+  }
+  @keyframes float-y {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
+  }
+  @keyframes text-shine {
+    to { background-position: 200% center; }
+  }
+  @keyframes orb-pulse {
+    0%, 100% { transform: scale(1); opacity: 0.85; }
+    50% { transform: scale(1.06); opacity: 1; }
+  }
+  /* drifting "scanner" spotlight that lights up the red dot layer */
+  @keyframes scanner-drift {
+    0%   { -webkit-mask-position: 8% 26%; mask-position: 8% 26%; }
+    50%  { -webkit-mask-position: 92% 74%; mask-position: 92% 74%; }
+    100% { -webkit-mask-position: 8% 26%; mask-position: 8% 26%; }
+  }
+  /* slow flow of dashes along the converge paths */
+  @keyframes path-flow {
+    to { stroke-dashoffset: -28; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; }
+  }
+
+  * {
+    border-color: theme("colors.border");
+  }
+
+  html {
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  body {
+    @apply bg-ink text-chalk font-sans antialiased;
+    background-image:
+      radial-gradient(1100px 560px at 50% -12%, rgba(194, 14, 46, 0.06), transparent 60%),
+      radial-gradient(820px 460px at 92% 4%, rgba(194, 14, 46, 0.035), transparent 55%);
+    background-attachment: fixed;
+  }
+
+  ::selection {
+    background: rgba(194, 14, 46, 0.18);
+    color: #1c1a16;
+  }
+
+  /* Slim, light scrollbar */
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: rgba(28, 24, 18, 0.14);
+    border-radius: 999px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: rgba(28, 24, 18, 0.24);
+  }
+}
+
+@layer components {
+  /* Fine engineering grid — faint dark lines on the light canvas */
+  .bg-grid {
+    background-image:
+      linear-gradient(to right, rgba(28, 24, 18, 0.05) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(28, 24, 18, 0.05) 1px, transparent 1px);
+    background-size: 38px 38px;
+  }
+
+  .bg-grid-fade {
+    -webkit-mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, black 30%, transparent 75%);
+    mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, black 30%, transparent 75%);
+  }
+
+  /* Editorial display helper — pairs upright + italic accent */
+  .display {
+    @apply font-display tracking-[-0.02em];
+  }
+  .display-italic {
+    @apply font-display italic;
+  }
+
+  .text-gradient {
+    color: theme("colors.chalk.DEFAULT");
+  }
+
+  .text-gradient-red {
+    background: linear-gradient(180deg, #e11534 0%, #a40b25 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .text-shine {
+    background: linear-gradient(90deg, #c20e2e 0%, #e76074 28%, #c20e2e 52%, #e76074 76%, #c20e2e 100%);
+    background-size: 200% auto;
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    animation: text-shine 6s linear infinite;
+  }
+
+  /* Card surface — soft white with a hairline + gentle shadow */
+  .panel {
+    @apply rounded-lg border border-border bg-white/85 backdrop-blur-sm;
+    box-shadow: theme("boxShadow.panel");
+  }
+
+  .mono-label {
+    @apply font-mono text-[11px] uppercase tracking-[0.22em] text-chalk-faint;
+  }
+
+  .hairline {
+    @apply border-t border-border;
+  }
+
+  @media print {
+    * {
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+    }
+    body {
+      background: #ffffff !important;
+    }
+    .print\:hidden {
+      display: none !important;
+    }
+  }
+
+  /* Subtle paper grain — much lighter on the light theme */
+  .grain::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0.035;
+    mix-blend-mode: multiply;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+}
