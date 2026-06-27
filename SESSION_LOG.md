@@ -43,3 +43,4 @@ network). Light editorial UI.
 - 2026-06-27 10:42 · Update SESSION_LOG (564e44f)
 - 2026-06-27 11:20 · Exa OSINT recon for the adaptive agent + foreground OpenAI as the engine (ee20dba)
 - 2026-06-27 11:21 · Update SESSION_LOG (aa92892)
+- 2026-06-27 13:28 · Surface Exa as a co-equal 4th AI role (landing + in-run roster) (5eee57c)

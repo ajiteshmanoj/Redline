@@ -1,5 +1,6 @@
 "use client";
 
+import { Fragment } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { ArrowRight, ShieldCheck, Scale, Zap, Check, Crosshair, Gavel, Bot, Layers, Globe } from "lucide-react";
@@ -45,6 +46,17 @@ const ENGINE_ROLES = [
     role: "OpenAI · Structured Outputs · gpt-5.4",
     body: "A separate OpenAI call scores every response with Structured Outputs — strict broken / severity / reason. It never sees its own attacks, so the verdict isn't a model marking its own homework.",
   },
+];
+
+// The architecture as a left-to-right pipeline: four models hand off in one
+// engagement, ending in the scored verdict. Rendered as the "flow ribbon"
+// above the detailed role cards so the layers are obvious at a glance.
+const PIPELINE = [
+  { stage: "Recon", model: "Exa", note: "neural web search" },
+  { stage: "Attack", model: "gpt-5.5", note: "reasoning attacker" },
+  { stage: "Target", model: "gpt-4.1-mini", note: "bot under test" },
+  { stage: "Judge", model: "gpt-5.4", note: "structured outputs" },
+  { stage: "Verdict", model: "score · S$ exposure", note: "rubric-derived", accent: true },
 ];
 
 const fadeUp = {
@@ -254,59 +266,100 @@ export default function LandingPage() {
       </Section>
 
       {/* ===================== THE ENGINE ===================== */}
-      <Section id="engine">
-        <SectionHeading
-          eyebrow="The engine · OpenAI + Exa"
-          title="Four roles, adversarial by design."
-          sub="Redline isn't one model talking to itself. An Exa recon scout, a reasoning-model attacker, the target, and a separate Structured-Outputs judge each play a distinct role — three OpenAI models plus live-web recon. That separation is what makes the verdict credible."
-        />
-        <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-          {ENGINE_ROLES.map((r, i) => (
-            <Reveal key={r.title} delay={i}>
-              <div className="panel h-full p-6">
-                <div className="flex h-11 w-11 items-center justify-center rounded-full border border-redline/30 bg-redline/[0.06] text-redline">
-                  <r.icon className="h-5 w-5" />
+      {/* Full-bleed faint band so the architecture reads as a deliberate, */}
+      {/* standalone showcase against the cream canvas (still all-light). */}
+      <section id="engine" className="scroll-mt-20 border-y border-border bg-ink-900/50 py-24">
+        <div className="container">
+          <SectionHeading
+            eyebrow="The engine · OpenAI + Exa"
+            title="Four models. One adversarial pipeline."
+            sub="Redline isn't one model talking to itself. Each engagement runs four distinct models in sequence — an Exa recon scout, a reasoning-model attacker, your target bot, and a separate Structured-Outputs judge — ending in a rubric-scored verdict. That separation is the architecture that makes the result credible."
+          />
+
+          {/* ---- Flow ribbon: the layers, left to right ---- */}
+          <Reveal>
+            <div className="mt-12">
+              <div className="flex flex-col items-stretch gap-2.5 sm:flex-row sm:items-stretch">
+                {PIPELINE.map((p, i) => (
+                  <Fragment key={p.stage}>
+                    <div
+                      className={`flex-1 rounded-lg border px-4 py-3.5 text-center shadow-[0_1px_2px_rgba(28,24,18,0.04)] ${
+                        p.accent
+                          ? "border-redline/40 bg-redline/[0.05]"
+                          : "border-border bg-white/85"
+                      }`}
+                    >
+                      <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-redline">
+                        {String(i + 1).padStart(2, "0")} · {p.stage}
+                      </p>
+                      <p className="mt-1.5 font-mono text-sm font-semibold text-chalk">{p.model}</p>
+                      <p className="mt-0.5 text-[11px] text-chalk-faint">{p.note}</p>
+                    </div>
+                    {i < PIPELINE.length - 1 ? (
+                      <div className="flex items-center justify-center text-chalk-faint">
+                        <ArrowRight className="h-4 w-4 rotate-90 sm:rotate-0" />
+                      </div>
+                    ) : null}
+                  </Fragment>
+                ))}
+              </div>
+              <p className="mt-3 text-center font-mono text-[11px] uppercase tracking-wider text-chalk-faint">
+                one engagement · recon → attack → response → verdict
+              </p>
+            </div>
+          </Reveal>
+
+          {/* ---- Detailed role cards ---- */}
+          <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+            {ENGINE_ROLES.map((r, i) => (
+              <Reveal key={r.title} delay={i}>
+                <div className="panel h-full p-6">
+                  <div className="flex h-11 w-11 items-center justify-center rounded-full border border-redline/30 bg-redline/[0.06] text-redline">
+                    <r.icon className="h-5 w-5" />
+                  </div>
+                  <h3 className="mt-4 font-display text-lg font-semibold">{r.title}</h3>
+                  <p className="mt-1 font-mono text-[11px] uppercase tracking-wider text-chalk-faint">
+                    {r.role}
+                  </p>
+                  <p className="mt-3 text-sm leading-relaxed text-chalk-dim">{r.body}</p>
                 </div>
-                <h3 className="mt-4 font-display text-lg font-semibold">{r.title}</h3>
-                <p className="mt-1 font-mono text-[11px] uppercase tracking-wider text-chalk-faint">
-                  {r.role}
-                </p>
-                <p className="mt-3 text-sm leading-relaxed text-chalk-dim">{r.body}</p>
-              </div>
-            </Reveal>
-          ))}
-        </div>
-        <Reveal delay={3}>
-          <div className="panel mt-5 flex flex-col gap-4 p-6 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex items-start gap-3">
-              <Layers className="mt-0.5 h-5 w-5 shrink-0 text-redline" />
-              <div>
-                <p className="font-display text-base font-semibold">
-                  OpenAI for the brains, Exa for the eyes.
-                </p>
-                <p className="mt-1 max-w-2xl text-sm leading-relaxed text-chalk-dim">
-                  A reasoning model attacks; a separate model judges with{" "}
-                  <span className="text-chalk">Structured Outputs</span>; before each engagement{" "}
-                  <span className="text-chalk">Exa</span> searches the live web for the target
-                  company and OpenAI distills it into real competitors and data types to attack
-                  with. Per-role models run a stronger attacker than judge — and it&apos;s
-                  provider-agnostic under the hood (any OpenAI-compatible endpoint).
-                </p>
-              </div>
-            </div>
-            <div className="flex shrink-0 flex-wrap gap-2">
-              {["gpt-5.5 attacker", "gpt-5.4 judge", "exa recon"].map((m) => (
-                <span
-                  key={m}
-                  className="inline-flex items-center rounded-md border border-border bg-white/[0.02] px-2.5 py-1 font-mono text-[11px] uppercase tracking-wider text-chalk-dim"
-                >
-                  {m}
-                </span>
-              ))}
-            </div>
+              </Reveal>
+            ))}
           </div>
-        </Reveal>
-      </Section>
+
+          {/* ---- Why this architecture ---- */}
+          <Reveal delay={3}>
+            <div className="panel mt-5 flex flex-col gap-4 p-6 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-start gap-3">
+                <Layers className="mt-0.5 h-5 w-5 shrink-0 text-redline" />
+                <div>
+                  <p className="font-display text-base font-semibold">
+                    OpenAI for the brains, Exa for the eyes.
+                  </p>
+                  <p className="mt-1 max-w-2xl text-sm leading-relaxed text-chalk-dim">
+                    A reasoning model attacks; a separate model judges with{" "}
+                    <span className="text-chalk">Structured Outputs</span>; before each engagement{" "}
+                    <span className="text-chalk">Exa</span> searches the live web for the target
+                    company and OpenAI distills it into real competitors and data types to attack
+                    with. Per-role models run a stronger attacker than judge — and it&apos;s
+                    provider-agnostic under the hood (any OpenAI-compatible endpoint).
+                  </p>
+                </div>
+              </div>
+              <div className="flex shrink-0 flex-wrap gap-2">
+                {["gpt-5.5 attacker", "gpt-5.4 judge", "exa recon"].map((m) => (
+                  <span
+                    key={m}
+                    className="inline-flex items-center rounded-md border border-border bg-white/60 px-2.5 py-1 font-mono text-[11px] uppercase tracking-wider text-chalk-dim"
+                  >
+                    {m}
+                  </span>
+                ))}
+              </div>
+            </div>
+          </Reveal>
+        </div>
+      </section>
 
       {/* ===================== ATTACK SUITE ===================== */}
       <Section id="attacks">
