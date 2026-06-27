@@ -21,9 +21,9 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(__dirname, "..");
 const OUT_DIR = resolve(ROOT, "public/tour");
 
-// Default voice: ElevenLabs "Brian" — warm, natural narrator (sounds human, not
-// robotic). Override with any voice from the library via ELEVENLABS_VOICE_ID.
-const DEFAULT_VOICE = "nPczCjzI2devNBz1zQrb";
+// Default voice: ElevenLabs "Rachel" — calm, natural narration voice. Override
+// with any specific library voice via ELEVENLABS_VOICE_ID.
+const DEFAULT_VOICE = "21m00Tcm4TlvDq8ikWAM";
 const MODEL_ID = "eleven_multilingual_v2";
 
 function loadEnvLocal() {

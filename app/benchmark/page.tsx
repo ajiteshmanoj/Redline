@@ -79,7 +79,7 @@ export default function BenchmarkPage() {
         </p>
 
         {/* ---------- Leaderboard ---------- */}
-        <div className="mt-12">
+        <div className="mt-12" data-tour="benchmark-grades">
           <div className="mb-4 flex items-center gap-2">
             <Trophy className="h-4 w-4 text-redline" />
             <h2 className="font-display text-xl font-semibold">Leaderboard — most secure first</h2>

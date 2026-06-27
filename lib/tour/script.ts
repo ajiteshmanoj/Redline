@@ -119,7 +119,13 @@ export const TOUR_STEPS: TourStep[] = [
     id: "benchmark",
     route: "/benchmark",
     target: "benchmark",
-    say: "And the Benchmark grades the whole landscape — how the common ways teams build these bots hold up — turning every audit into industry data.",
+    say: "Redline is also a benchmark. It runs the State of AI Agent Security — a living measure of how the common ways teams build these bots actually hold up.",
+  },
+  {
+    id: "benchmark-grades",
+    route: "/benchmark",
+    target: "benchmark-grades",
+    say: "Every archetype is graded A through F from real audits and ranked most-secure first — and every audit run on Redline feeds it. So it's a leaderboard of what's really breaking in the wild, not a static report.",
   },
   {
     id: "closing",
