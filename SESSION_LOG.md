@@ -49,3 +49,5 @@ network). Light editorial UI.
 - 2026-06-27 15:07 · Add self-driving guided demo (voiced) with live FoxDesk audit (d12cd6b)
 - 2026-06-27 15:13 · Scrub provider-example references to keep docs vendor-neutral (470e23e)
 - 2026-06-27 15:45 · Captured FoxDesk fallback: smooth, deterministic replay of a real run (26f0e10)
+- 2026-06-27 15:55 · Tour: Rachel narration voice + give Benchmark a proper two-beat segment (f658cc6)
+- 2026-06-27 16:17 · Guided tour: add a GitHub-repo audit beat (deterministic prefill + voice) (71c51ef)
