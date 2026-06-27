@@ -57,7 +57,7 @@ export default function WatchPage() {
         </div>
 
         {/* ---------- Hero ---------- */}
-        <div className="max-w-2xl">
+        <div className="max-w-2xl" data-tour="watch">
           <div className="mb-5 flex items-center gap-3">
             <p className="mono-label flex items-center gap-2">
               <Radar className="h-3.5 w-3.5 text-redline" /> Redline Watch

@@ -21,8 +21,9 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(__dirname, "..");
 const OUT_DIR = resolve(ROOT, "public/tour");
 
-// Default voice: ElevenLabs "Adam" (calm, professional). Override via env.
-const DEFAULT_VOICE = "pNInz6obpgDQGcFmaJgB";
+// Default voice: ElevenLabs "Brian" — warm, natural narrator (sounds human, not
+// robotic). Override with any voice from the library via ELEVENLABS_VOICE_ID.
+const DEFAULT_VOICE = "nPczCjzI2devNBz1zQrb";
 const MODEL_ID = "eleven_multilingual_v2";
 
 function loadEnvLocal() {
@@ -61,7 +62,15 @@ async function tts(text, voiceId, apiKey) {
     body: JSON.stringify({
       text,
       model_id: MODEL_ID,
-      voice_settings: { stability: 0.45, similarity_boost: 0.8, style: 0.15, use_speaker_boost: true },
+      // Lower stability + a touch of style = more natural, less monotone.
+      // speed slightly above 1 so delivery feels brisk, not sluggish.
+      voice_settings: {
+        stability: 0.32,
+        similarity_boost: 0.75,
+        style: 0.42,
+        use_speaker_boost: true,
+        speed: 1.08,
+      },
     }),
   });
   if (!res.ok) {

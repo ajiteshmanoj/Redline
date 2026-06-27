@@ -48,7 +48,7 @@ export default function BenchmarkPage() {
         </div>
 
         {/* ---------- Hero ---------- */}
-        <div className="max-w-3xl">
+        <div className="max-w-3xl" data-tour="benchmark">
           <div className="mb-5 flex items-center gap-3">
             <p className="mono-label flex items-center gap-2">
               <BarChart3 className="h-3.5 w-3.5 text-redline" /> Redline Benchmark

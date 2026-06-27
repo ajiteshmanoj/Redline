@@ -162,6 +162,7 @@ export function AuditConsole({
                 <p className="text-sm font-medium text-chalk">{state.summary.headline}</p>
               </div>
               <button
+                data-tour="view-report"
                 onClick={onViewReport}
                 className={cn(
                   "group inline-flex shrink-0 items-center gap-1.5 rounded-md px-4 py-2 text-sm font-medium text-white transition-colors",

@@ -109,7 +109,7 @@ export function AuditExperience({
               <AuditConsole targetName={title} state={state} onViewReport={goReport} />
             </motion.div>
           ) : view === "report" ? (
-            <motion.div key="report" initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.4 }}>
+            <motion.div data-tour="report" key="report" initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.4 }}>
               <ReportView
                 targetName={title}
                 state={baseline ?? state}

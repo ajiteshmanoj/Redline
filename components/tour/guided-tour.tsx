@@ -130,20 +130,20 @@ export function GuidedTour({ steps = TOUR_STEPS }: { steps?: TourStep[] }) {
     if (!active || !step) return;
     let cancelled = false;
     clearTimers();
-    setRect(null);
+    // Keep the previous spotlight visible during navigation/wait — smoother.
 
     (async () => {
       // 1. ensure we're on the right route
       if (step.route && pathname !== step.route) router.push(step.route);
 
-      // 2. wait for the target element to exist
-      const el = await waitForElement(targetSelector(step.target), 9000, () => cancelled);
+      // 2. wait for the target element to exist (long for live runs)
+      const el = await waitForElement(targetSelector(step.target), step.waitMs ?? 9000, () => cancelled);
       if (cancelled) return;
 
       // 3. enter-action (e.g. reveal a tab we're about to narrate)
       if (step.action?.type === "click" && (step.action.when ?? "enter") === "enter") {
         clickTarget(step.action.target);
-        await delay(180);
+        await delay(120);
       }
       if (cancelled) return;
 
@@ -153,7 +153,7 @@ export function GuidedTour({ steps = TOUR_STEPS }: { steps?: TourStep[] }) {
         block: "center",
       });
       positionToTarget();
-      setTimeout(() => !cancelled && positionToTarget(), 650);
+      setTimeout(() => !cancelled && positionToTarget(), 380);
 
       // 5. narrate — audio if a clip exists, else a timed hold
       const armFallback = () => {
@@ -236,11 +236,11 @@ export function GuidedTour({ steps = TOUR_STEPS }: { steps?: TourStep[] }) {
           className="pointer-events-none absolute rounded-xl"
           initial={false}
           animate={{ top: rect.top, left: rect.left, width: rect.width, height: rect.height }}
-          transition={{ type: "spring", stiffness: 220, damping: 30 }}
-          style={{ boxShadow: "0 0 0 9999px rgba(23,18,15,0.62)", outline: "1.5px solid rgba(194,14,46,0.85)", outlineOffset: 2 }}
+          transition={{ type: "spring", stiffness: 300, damping: 28 }}
+          style={{ boxShadow: "0 0 0 9999px rgba(28,24,18,0.40)", outline: "2px solid rgba(194,14,46,0.9)", outlineOffset: 3 }}
         />
       ) : (
-        <div className="pointer-events-none absolute inset-0 bg-[rgba(23,18,15,0.62)]" />
+        <div className="pointer-events-none absolute inset-0 bg-[rgba(28,24,18,0.40)]" />
       )}
 
       {/* Faux cursor. */}
@@ -248,7 +248,7 @@ export function GuidedTour({ steps = TOUR_STEPS }: { steps?: TourStep[] }) {
         className="pointer-events-none absolute z-[82]"
         initial={false}
         animate={{ x: cursor.x, y: cursor.y }}
-        transition={{ type: "spring", stiffness: 200, damping: 26 }}
+        transition={{ type: "spring", stiffness: 280, damping: 26 }}
       >
         <svg width="26" height="26" viewBox="0 0 24 24" className="drop-shadow-[0_2px_4px_rgba(0,0,0,0.4)]">
           <path d="M3 2l16 7-6.5 2L9 18 3 2z" fill="#C20E2E" stroke="#fff" strokeWidth="1.2" strokeLinejoin="round" />

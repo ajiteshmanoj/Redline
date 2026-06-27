@@ -47,3 +47,4 @@ network). Light editorial UI.
 - 2026-06-27 13:53 · Add "Built to a standard" landing section (§5) (fed3060)
 - 2026-06-27 14:28 · Add self-driving guided demo (voiced) with live FoxDesk audit (dc60d64)
 - 2026-06-27 15:07 · Add self-driving guided demo (voiced) with live FoxDesk audit (d12cd6b)
+- 2026-06-27 15:13 · Scrub provider-example references to keep docs vendor-neutral (470e23e)
