@@ -297,19 +297,17 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ===================== FINAL CTA (dark close) ===================== */}
-      <section className="relative overflow-hidden bg-night pb-32 pt-44 text-white">
-        {/* smooth fade: cream page dissolves into the dark band */}
-        <div className="pointer-events-none absolute inset-x-0 top-0 z-[1] h-56 bg-gradient-to-b from-ink via-ink/70 to-transparent" />
-        <DotField tone="dark" className="opacity-90" />
-        <div className="absolute inset-0 -z-0 bg-[radial-gradient(620px_320px_at_50%_10%,rgba(194,14,46,0.22),transparent_70%)]" />
-        <div className="container relative z-10 text-center">
+      {/* ===================== FINAL CTA ===================== */}
+      <section className="relative overflow-hidden py-28">
+        <div className="absolute inset-0 -z-10 bg-grid bg-grid-fade opacity-40" />
+        <div className="absolute inset-0 -z-10 bg-[radial-gradient(640px_340px_at_50%_35%,rgba(194,14,46,0.07),transparent_70%)]" />
+        <div className="container relative text-center">
           <Reveal>
             <h2 className="mx-auto max-w-3xl font-display text-4xl font-semibold tracking-tight sm:text-6xl">
               Find the break before your{" "}
-              <span className="italic text-[#ff8a98]">customers do.</span>
+              <span className="italic text-redline">customers do.</span>
             </h2>
-            <p className="mx-auto mt-5 max-w-xl text-white/60">
+            <p className="mx-auto mt-5 max-w-xl text-chalk-dim">
               Run a full audit against a live demo bot in under a minute. No setup, no signup.
             </p>
             <Magnetic>
@@ -333,32 +331,32 @@ export default function LandingPage() {
 
 function SiteFooter() {
   return (
-    <footer className="relative overflow-hidden bg-night text-white">
+    <footer className="relative overflow-hidden border-t border-border">
       <div className="container relative z-10 py-16">
         <div className="flex flex-col gap-10 sm:flex-row sm:items-start sm:justify-between">
           <div className="max-w-xs">
-            <span className="flex items-center gap-2.5">
+            <span className="flex items-center gap-2">
               <Logomark />
-              <span className="font-display text-xl font-semibold tracking-tight text-white">
+              <span className="font-display text-xl font-semibold tracking-tight text-chalk">
                 Redline
               </span>
             </span>
-            <p className="mt-4 text-sm leading-relaxed text-white/55">
+            <p className="mt-4 text-sm leading-relaxed text-chalk-dim">
               Adversarial AI security. Find the break before your customers — or your lawyers — do.
             </p>
           </div>
           <div className="flex gap-14 text-sm">
             <div>
-              <p className="mono-label mb-3 text-white/40">Product</p>
-              <ul className="space-y-2.5 text-white/70">
-                <li><Link href="/#how" className="transition-colors hover:text-white">How it works</Link></li>
-                <li><Link href="/#attacks" className="transition-colors hover:text-white">Attack suite</Link></li>
-                <li><Link href="/audit" className="transition-colors hover:text-white">Run an audit</Link></li>
+              <p className="mono-label mb-3">Product</p>
+              <ul className="space-y-2.5 text-chalk-dim">
+                <li><Link href="/#how" className="transition-colors hover:text-chalk">How it works</Link></li>
+                <li><Link href="/#attacks" className="transition-colors hover:text-chalk">Attack suite</Link></li>
+                <li><Link href="/audit" className="transition-colors hover:text-chalk">Run an audit</Link></li>
               </ul>
             </div>
             <div>
-              <p className="mono-label mb-3 text-white/40">Standards</p>
-              <ul className="space-y-2.5 text-white/70">
+              <p className="mono-label mb-3">Standards</p>
+              <ul className="space-y-2.5 text-chalk-dim">
                 <li>OWASP LLM Top 10</li>
                 <li>MAS AI Risk Guidelines</li>
                 <li>Singapore PDPA</li>
@@ -366,17 +364,17 @@ function SiteFooter() {
             </div>
           </div>
         </div>
-        <div className="mt-12 flex items-center justify-between border-t border-white/10 pt-6 font-mono text-xs text-white/40">
+        <div className="mt-12 flex items-center justify-between border-t border-border pt-6 font-mono text-xs text-chalk-faint">
           <span className="flex items-center gap-2">
             <Scale className="h-3.5 w-3.5" /> PDPA-aware
           </span>
           <span>Redline · built for the demo stage</span>
         </div>
       </div>
-      {/* oversized wordmark, like the reference footer */}
+      {/* oversized wordmark — faint ink, embossed on the cream */}
       <p
         aria-hidden
-        className="pointer-events-none select-none px-4 text-center font-display italic leading-[0.74] text-white/[0.05]"
+        className="pointer-events-none select-none px-4 text-center font-display italic leading-[0.74] text-black/[0.04]"
         style={{ fontSize: "clamp(5rem, 22vw, 18rem)" }}
       >
         Redline
