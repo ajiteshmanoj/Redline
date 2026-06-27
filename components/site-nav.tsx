@@ -47,8 +47,14 @@ export function SiteNav() {
           >
             Attack suite
           </Link>
-          <Link href="/#who" className="text-sm text-chalk-dim transition-colors hover:text-chalk">
-            Who it&apos;s for
+          <Link href="/watch" className="text-sm text-chalk-dim transition-colors hover:text-chalk">
+            Watch
+          </Link>
+          <Link
+            href="/benchmark"
+            className="text-sm text-chalk-dim transition-colors hover:text-chalk"
+          >
+            Benchmark
           </Link>
         </nav>
         <Link href="/audit">

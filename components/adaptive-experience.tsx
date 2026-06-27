@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import Link from "next/link";
 import {
   ArrowLeft,
+  Banknote,
   Crosshair,
   Download,
   Fingerprint,
@@ -25,6 +26,7 @@ import { summarizeAdaptive } from "@/lib/adaptive";
 import { categoryVisual } from "./category-meta";
 import { categoryMap } from "@/lib/attacks";
 import { SeverityMeter } from "./severity-meter";
+import { aggregateExposure, formatSGD } from "@/lib/exposure";
 import { ModeBadge } from "./mode-badge";
 import { RunRoster } from "./run-roster";
 import { Wordmark } from "./brand";
@@ -54,6 +56,55 @@ export function AdaptiveExperience({
   const brokenCount = state.summary
     ? state.summary.broken
     : state.campaigns.filter((c) => c.broken).length;
+
+  // Live business exposure — same model as the static report, fed by the goals
+  // the agent has achieved so far (each broken campaign carries category + sev).
+  const exposure = aggregateExposure(
+    state.campaigns.filter((c) => c.broken).map((c) => ({ category: c.category, severity: c.severity })),
+  );
+
+  // Smooth auto-scroll: follow the action as the agent streams new turns. We
+  // disengage only on a genuine user scroll-UP intent (wheel up / PageUp / Home
+  // / touch), and re-engage once they scroll back near the bottom. Using intent
+  // (not scroll position) avoids a feedback deadlock where the programmatic
+  // smooth-scroll's own mid-animation frames would read as "user scrolled away".
+  const feedEndRef = useRef<HTMLDivElement>(null);
+  const followRef = useRef(true);
+  const turnsRendered =
+    state.liveTurns.length + state.campaigns.reduce((acc, c) => acc + c.turns.length, 0);
+
+  useEffect(() => {
+    const onWheel = (e: WheelEvent) => {
+      if (e.deltaY < 0) followRef.current = false; // user pulled up to read
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (["ArrowUp", "PageUp", "Home"].includes(e.key)) followRef.current = false;
+    };
+    const onTouch = () => {
+      followRef.current = false;
+    };
+    const onScroll = () => {
+      // Re-engage when the user returns near the bottom.
+      const fromBottom =
+        document.documentElement.scrollHeight - (window.scrollY + window.innerHeight);
+      if (fromBottom < 120) followRef.current = true;
+    };
+    window.addEventListener("wheel", onWheel, { passive: true });
+    window.addEventListener("keydown", onKey);
+    window.addEventListener("touchmove", onTouch, { passive: true });
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => {
+      window.removeEventListener("wheel", onWheel);
+      window.removeEventListener("keydown", onKey);
+      window.removeEventListener("touchmove", onTouch);
+      window.removeEventListener("scroll", onScroll);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (state.phase !== "running" || !followRef.current) return;
+    feedEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+  }, [turnsRendered, state.recon, state.current?.goalId, state.phase]);
 
   return (
     <main className="relative min-h-screen">
@@ -154,6 +205,9 @@ export function AdaptiveExperience({
                 LLM_API_KEY, or run a bot with a captured demo fixture.
               </div>
             ) : null}
+
+            {/* Auto-scroll anchor — kept in view while the agent streams. */}
+            <div ref={feedEndRef} aria-hidden className="h-0 scroll-mt-24" />
           </div>
 
           {/* ---------------- Telemetry ---------------- */}
@@ -182,6 +236,25 @@ export function AdaptiveExperience({
                 </div>
               </div>
             </div>
+
+            {exposure.totalSGD > 0 ? (
+              <div className="panel grain relative overflow-hidden border-redline/30 p-5">
+                <div className="absolute inset-0 -z-10 bg-[radial-gradient(420px_circle_at_80%_0%,rgba(255,59,59,0.10),transparent_60%)]" />
+                <p className="mono-label mb-2 flex items-center gap-2">
+                  <Banknote className="h-3.5 w-3.5 text-redline" /> Estimated exposure
+                </p>
+                <p className="font-display text-3xl font-bold leading-none tracking-tight text-redline">
+                  {formatSGD(exposure.totalSGD)}
+                </p>
+                <p className="mt-1.5 font-mono text-[10px] uppercase tracking-wider text-chalk-faint">
+                  range {formatSGD(exposure.rangeSGD[0])} – {formatSGD(exposure.rangeSGD[1])}
+                </p>
+                <p className="mt-2.5 text-xs leading-relaxed text-chalk-dim">
+                  From the {brokenCount} goal{brokenCount === 1 ? "" : "s"} the agent has achieved —
+                  Singapore-anchored, severity-scaled. Indicative, not a precise figure.
+                </p>
+              </div>
+            ) : null}
 
             <div className="panel p-5">
               <p className="mono-label mb-3">AI in this run</p>
@@ -235,6 +308,9 @@ function AdaptivePrintReport({
   // Only campaigns that actually ran (a 0-turn campaign never engaged).
   const ran = campaigns.filter((c) => c.turns.length > 0);
   const broken = ran.filter((c) => c.broken);
+  const exposure = aggregateExposure(
+    broken.map((c) => ({ category: c.category, severity: c.severity })),
+  );
   const tag = (c: AdaptiveCampaign) => {
     const m = categoryMap[c.category];
     return m.masRisk ? `${m.owaspId} · MAS: ${m.masRisk}` : m.owaspId;
@@ -252,6 +328,14 @@ function AdaptivePrintReport({
         resisted
         {summary.avgTurnsToBreak ? ` · avg ${summary.avgTurnsToBreak} turns to break` : ""}
       </p>
+      {exposure.totalSGD > 0 ? (
+        <p className="mt-1 text-sm font-semibold text-redline">
+          Estimated exposure: {formatSGD(exposure.totalSGD)}{" "}
+          <span className="font-normal text-chalk-faint">
+            (range {formatSGD(exposure.rangeSGD[0])} – {formatSGD(exposure.rangeSGD[1])}; indicative)
+          </span>
+        </p>
+      ) : null}
       <p className="mt-2 max-w-3xl text-sm text-chalk-dim">{summary.headline}</p>
 
       <h2 className="mb-2 mt-6 font-display text-base font-semibold">

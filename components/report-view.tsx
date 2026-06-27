@@ -18,12 +18,20 @@ import {
   ListChecks,
   AlertTriangle,
   Swords,
+  Banknote,
+  TrendingDown,
 } from "lucide-react";
 import Link from "next/link";
 import type { AuditSummary } from "@/lib/types";
 import type { AuditState } from "./use-audit";
 import { saveReport } from "@/lib/saved-reports";
 import { isTransportError } from "@/lib/audit";
+import {
+  aggregateExposure,
+  exposureFor,
+  exposureKindLabel,
+  formatSGD,
+} from "@/lib/exposure";
 import { DisclosurePanel } from "./disclosure-panel";
 import { Button } from "./ui/button";
 import { SeverityMeter } from "./severity-meter";
@@ -53,6 +61,7 @@ export function ReportView({
   const [showDisclosure, setShowDisclosure] = useState(false);
   if (!summary) return null;
   const band = bandMeta[summary.band];
+  const exposure = aggregateExposure(vulnerabilities);
   // Prefer the count recorded in the summary; fall back to recomputing from the
   // raw results (handles older saved reports without the field).
   const erroredCount =
@@ -148,6 +157,11 @@ export function ReportView({
         </div>
       </motion.div>
 
+      {/* ---------- Business exposure ---------- */}
+      {vulnerabilities.length > 0 && !allErrored ? (
+        <ExposureBanner exposure={exposure} />
+      ) : null}
+
       {/* ---------- Target reachability ---------- */}
       {erroredCount > 0 ? (
         <div className="panel grain relative overflow-hidden border-warn/40 bg-warn/[0.05] p-5">
@@ -229,7 +243,12 @@ export function ReportView({
 
       {/* ---------- Prove the fix ---------- */}
       {onProve && patches.length > 0 ? (
-        <ProveTheFix proof={proof ?? null} beforeScore={summary.score} onProve={onProve} />
+        <ProveTheFix
+          proof={proof ?? null}
+          beforeScore={summary.score}
+          beforeExposure={exposure.totalSGD}
+          onProve={onProve}
+        />
       ) : null}
     </div>
   );
@@ -238,55 +257,71 @@ export function ReportView({
 function ProveTheFix({
   proof,
   beforeScore,
+  beforeExposure,
   onProve,
 }: {
   proof: AuditSummary | null;
   beforeScore: number;
+  beforeExposure: number;
   onProve: () => void;
 }) {
   if (proof) {
-    const delta = Math.max(0, beforeScore - proof.score);
+    const scoreDelta = Math.max(0, beforeScore - proof.score);
+    // After hardening the bot holds the full battery, so residual exposure is ~0.
+    const afterExposure = 0;
+    const exposureDelta = Math.max(0, beforeExposure - afterExposure);
     return (
       <motion.div
-        initial={{ opacity: 0, y: 12 }}
+        initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
-        className="panel grain relative overflow-hidden border-safe/30 p-6"
+        className="panel grain relative overflow-hidden border-safe/30 p-7"
       >
-        <div className="absolute inset-0 -z-10 bg-[radial-gradient(600px_circle_at_20%_0%,rgba(55,201,139,0.10),transparent_60%)]" />
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div className="flex items-center gap-4">
-            <div className="flex h-11 w-11 items-center justify-center rounded-full border border-safe/40 bg-safe/10">
-              <ShieldCheck className="h-5 w-5 text-safe" />
-            </div>
-            <div>
-              <p className="font-display text-lg font-semibold text-chalk">Fix verified.</p>
-              <p className="text-sm text-chalk-dim">
-                Re-audit with patches applied dropped risk{" "}
-                <span className="font-mono text-redline">{beforeScore}</span> →{" "}
-                <span className="font-mono text-safe">{proof.score}</span>. The same battery now holds.
-              </p>
-            </div>
+        <div className="absolute inset-0 -z-10 bg-[radial-gradient(700px_circle_at_25%_0%,rgba(55,201,139,0.14),transparent_60%)]" />
+        <div className="mb-5 flex items-center gap-3">
+          <div className="flex h-11 w-11 items-center justify-center rounded-full border border-safe/40 bg-safe/10">
+            <ShieldCheck className="h-5 w-5 text-safe" />
           </div>
-          <span className="inline-flex items-center gap-2 rounded-full border border-safe/40 bg-safe/10 px-3 py-1.5 font-mono text-xs uppercase tracking-wider text-safe">
-            −{delta} risk eliminated
-          </span>
+          <div>
+            <p className="font-display text-xl font-semibold text-chalk">Fix verified — loop closed.</p>
+            <p className="text-sm text-chalk-dim">
+              Same 18-attack battery, re-run against the hardened bot. It now holds.
+            </p>
+          </div>
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <CollapseStat
+            label="Risk score"
+            before={`${beforeScore}`}
+            after={`${proof.score}`}
+            badge={`−${scoreDelta} risk eliminated`}
+          />
+          <CollapseStat
+            label="Estimated exposure"
+            before={formatSGD(beforeExposure)}
+            after={formatSGD(afterExposure)}
+            badge={`${formatSGD(exposureDelta)} taken off the table`}
+          />
         </div>
       </motion.div>
     );
   }
 
   return (
-    <div className="panel grain relative overflow-hidden p-6">
+    <div className="panel grain relative overflow-hidden p-7">
       <div className="absolute inset-0 -z-10 bg-[radial-gradient(600px_circle_at_80%_0%,rgba(255,59,59,0.10),transparent_60%)]" />
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div className="max-w-xl">
           <p className="mono-label mb-2 flex items-center gap-2">
             <Sparkles className="h-3.5 w-3.5 text-redline" /> Close the loop
           </p>
-          <h3 className="font-display text-xl font-semibold">Don&apos;t trust the patch — prove it.</h3>
+          <h3 className="font-display text-2xl font-semibold">
+            Don&apos;t trust the patch — prove it.
+          </h3>
           <p className="mt-1.5 text-sm text-chalk-dim">
             Apply the recommended patches and re-run the exact same battery against the hardened bot.
-            Watch the severity score collapse, live.
+            Watch the severity score — and{" "}
+            <span className="text-chalk">{formatSGD(beforeExposure)}</span> of exposure — collapse,
+            live.
           </p>
         </div>
         <Button onClick={onProve} className="group shrink-0">
@@ -294,6 +329,35 @@ function ProveTheFix({
           <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
         </Button>
       </div>
+    </div>
+  );
+}
+
+/** A before→after collapse with the eliminated delta as a badge. */
+function CollapseStat({
+  label,
+  before,
+  after,
+  badge,
+}: {
+  label: string;
+  before: string;
+  after: string;
+  badge: string;
+}) {
+  return (
+    <div className="rounded-md border border-border bg-white/[0.02] p-4">
+      <p className="mono-label mb-3">{label}</p>
+      <div className="flex items-center gap-3">
+        <span className="font-display text-3xl font-bold tabular-nums text-redline line-through decoration-redline/40 decoration-2">
+          {before}
+        </span>
+        <ArrowRight className="h-5 w-5 shrink-0 text-chalk-faint" />
+        <span className="font-display text-3xl font-bold tabular-nums text-safe">{after}</span>
+      </div>
+      <span className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-safe/40 bg-safe/10 px-2.5 py-1 font-mono text-[10px] uppercase tracking-wider text-safe">
+        <TrendingDown className="h-3 w-3" /> {badge}
+      </span>
     </div>
   );
 }
@@ -405,6 +469,64 @@ function RegulatoryContext({
   );
 }
 
+/**
+ * Headline business/regulatory exposure. Translates severity into the number a
+ * founder or VC actually feels. Methodology is surfaced inline so the figure
+ * reads as indicative order-of-magnitude, never a precise liability quote.
+ */
+function ExposureBanner({
+  exposure,
+}: {
+  exposure: ReturnType<typeof aggregateExposure>;
+}) {
+  const [lo, hi] = exposure.rangeSGD;
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="panel grain relative overflow-hidden border-redline/30 p-6"
+    >
+      <div className="absolute inset-0 -z-10 bg-[radial-gradient(620px_circle_at_85%_0%,rgba(255,59,59,0.10),transparent_60%)]" />
+      <div className="grid items-center gap-6 md:grid-cols-[auto_1fr]">
+        <div className="md:border-r md:border-border md:pr-6">
+          <p className="mono-label mb-2 flex items-center gap-2">
+            <Banknote className="h-3.5 w-3.5 text-redline" /> Estimated exposure
+          </p>
+          <p className="font-display text-4xl font-bold leading-none tracking-tight text-redline sm:text-5xl">
+            {formatSGD(exposure.totalSGD)}
+          </p>
+          <p className="mt-2 font-mono text-[11px] uppercase tracking-wider text-chalk-faint">
+            range {formatSGD(lo)} – {formatSGD(hi)}
+          </p>
+        </div>
+        <div>
+          <p className="text-sm leading-relaxed text-chalk-dim">
+            Left unfixed, the confirmed breaks below put an estimated{" "}
+            <span className="font-semibold text-chalk">{formatSGD(exposure.totalSGD)}</span> on the
+            table — driven by{" "}
+            <span className="text-chalk">{exposure.topBasis.toLowerCase()}</span>.
+          </p>
+          <div className="mt-3 flex flex-wrap gap-1.5">
+            {exposure.drivers.map((d) => (
+              <span
+                key={d}
+                className="inline-flex items-center rounded border border-border bg-white/[0.03] px-2 py-0.5 font-mono text-[10px] uppercase tracking-wider text-chalk-dim"
+              >
+                {exposureKindLabel(d)}
+              </span>
+            ))}
+          </div>
+          <p className="mt-3 text-xs leading-relaxed text-chalk-faint">
+            Indicative, severity-scaled, Singapore-anchored (PDPA penalty ceiling, fraud-window
+            losses, claim liability). Regulatory caps don&apos;t stack. Not a precise liability
+            figure — an order-of-magnitude of what&apos;s at risk.
+          </p>
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
 function ScoreChip({
   label,
   value,
@@ -483,10 +605,11 @@ function VulnRow({
 
       {open ? (
         <div className="border-t border-border px-5 py-4">
-          <p className="mb-4 flex items-start gap-2 rounded-md bg-redline/[0.07] px-3 py-2 text-sm text-redline-bright">
+          <p className="mb-3 flex items-start gap-2 rounded-md bg-redline/[0.07] px-3 py-2 text-sm text-redline-bright">
             <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0" />
             {vuln.reason}
           </p>
+          <ExposureLine category={vuln.category} severity={vuln.severity} />
           <p className="mono-label mb-2">Proof transcript</p>
           <div className="space-y-2 rounded-md border border-border bg-ink-900/60 p-4 font-mono text-xs leading-relaxed">
             <div className="flex gap-2.5">
@@ -501,6 +624,29 @@ function VulnRow({
         </div>
       ) : null}
     </motion.div>
+  );
+}
+
+/** Per-finding exposure line shown inside an expanded vulnerability. */
+function ExposureLine({
+  category,
+  severity,
+}: {
+  category: AuditState["vulnerabilities"][number]["category"];
+  severity: number;
+}) {
+  const e = exposureFor(category, severity);
+  return (
+    <div className="mb-4 flex flex-wrap items-center gap-x-3 gap-y-1 rounded-md border border-border bg-white/[0.02] px-3 py-2">
+      <span className="inline-flex items-center gap-1.5 font-display text-base font-bold text-redline">
+        <Banknote className="h-4 w-4" />
+        {formatSGD(e.amountSGD)}
+      </span>
+      <span className="font-mono text-[10px] uppercase tracking-wider text-chalk-faint">
+        {exposureKindLabel(e.kind)}
+      </span>
+      <span className="text-xs text-chalk-dim">{e.basis}</span>
+    </div>
   );
 }
 

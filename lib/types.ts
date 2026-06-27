@@ -64,6 +64,39 @@ export type Vulnerability = {
   response: string;
 };
 
+// ---- Business / regulatory exposure --------------------------------------
+// Translates a confirmed break into the language a non-technical buyer feels:
+// money and regulatory consequence. Indicative, severity-scaled, methodology
+// surfaced in the report — never presented as a precise liability.
+
+export type ExposureKind =
+  | "regulatory" // statutory fine (e.g. PDPA financial penalty)
+  | "direct-loss" // money out the door (unauthorised payouts, fraud)
+  | "liability" // claims arising from bad advice / unhonoured promises
+  | "reputational"; // brand / trust damage, remediation & churn
+
+export type Exposure = {
+  kind: ExposureKind;
+  // What drives the cost — one tight phrase shown next to the figure.
+  basis: string;
+  // Representative point estimate in SGD, severity-scaled.
+  amountSGD: number;
+  // Plausible band around the point estimate.
+  rangeSGD: [number, number];
+};
+
+// Aggregated exposure across all confirmed breaks. Regulatory caps do NOT
+// stack (one breach, one statutory ceiling) — the aggregator takes the single
+// largest regulatory exposure and sums the rest.
+export type ExposureSummary = {
+  totalSGD: number;
+  rangeSGD: [number, number];
+  // Largest single line, for the headline ("driven by …").
+  topBasis: string;
+  // Distinct regulatory/standards drivers, for the one-line headline.
+  drivers: ExposureKind[];
+};
+
 // A user-configured live bot reached over HTTP (the "grant access by URL" flow).
 export type HttpTargetConfig = {
   name: string;

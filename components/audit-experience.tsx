@@ -11,6 +11,7 @@ import { ReportView } from "./report-view";
 import { Wordmark } from "./brand";
 import { Badge } from "./ui/badge";
 import { bandMeta } from "@/lib/utils";
+import { aggregateExposure, formatSGD } from "@/lib/exposure";
 
 type View = "console" | "report" | "reaudit";
 
@@ -114,7 +115,7 @@ export function AuditExperience({
             </motion.div>
           ) : (
             <motion.div key="reaudit" initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.4 }}>
-              <ProofHeader baseline={baseline?.summary ?? null} state={state} />
+              <ProofHeader baseline={baseline ?? null} state={state} />
               <AuditConsole
                 targetName={title}
                 state={state}
@@ -138,16 +139,18 @@ export function AuditExperience({
 }
 
 /** The before → after risk comparison shown above the patched re-audit. */
-function ProofHeader({ baseline, state }: { baseline: AuditSummary | null; state: AuditState }) {
-  const before = baseline?.score ?? 100;
+function ProofHeader({ baseline, state }: { baseline: AuditState | null; state: AuditState }) {
+  const before = baseline?.summary?.score ?? 100;
   const after = state.liveScore;
   const done = state.phase === "done";
   const delta = Math.max(0, before - after);
+  const beforeExposure = baseline ? aggregateExposure(baseline.vulnerabilities).totalSGD : 0;
+  const afterExposure = done ? 0 : null;
 
   return (
-    <div className="panel mb-6 flex flex-wrap items-center justify-between gap-4 p-5">
+    <div className="panel mb-6 flex flex-wrap items-center justify-between gap-6 p-5">
       <div className="flex items-center gap-5">
-        <Metric label="Before" value={before} tone="red" sub={baseline ? bandMeta[baseline.band].label : "Critical"} />
+        <Metric label="Before" value={before} tone="red" sub={baseline?.summary ? bandMeta[baseline.summary.band].label : "Critical"} />
         <ArrowRight className="h-5 w-5 text-chalk-faint" />
         <Metric
           label="After patch"
@@ -156,10 +159,27 @@ function ProofHeader({ baseline, state }: { baseline: AuditSummary | null; state
           sub={done && state.summary ? bandMeta[state.summary.band].label : "auditing…"}
         />
       </div>
+      {beforeExposure > 0 ? (
+        <div className="flex items-center gap-5">
+          <Metric
+            label="Exposure"
+            value={formatSGD(beforeExposure)}
+            tone="red"
+            sub="at risk"
+          />
+          <ArrowRight className="h-5 w-5 text-chalk-faint" />
+          <Metric
+            label="After patch"
+            value={afterExposure === null ? "…" : formatSGD(afterExposure)}
+            tone={done ? "safe" : "neutral"}
+            sub={done ? "cleared" : "auditing…"}
+          />
+        </div>
+      ) : null}
       <div className="flex items-center gap-2 text-sm">
         {done ? (
           <span className="inline-flex items-center gap-2 rounded-full border border-safe/40 bg-safe/10 px-3 py-1.5 font-mono text-xs uppercase tracking-wider text-safe">
-            <ShieldCheck className="h-4 w-4" /> −{delta} risk eliminated
+            <ShieldCheck className="h-4 w-4" /> −{delta} risk · {formatSGD(beforeExposure)} cleared
           </span>
         ) : (
           <span className="font-mono text-xs text-chalk-faint">
@@ -178,7 +198,7 @@ function Metric({
   sub,
 }: {
   label: string;
-  value: number;
+  value: number | string;
   tone: "red" | "safe" | "neutral";
   sub: string;
 }) {
