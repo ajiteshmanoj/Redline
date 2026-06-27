@@ -3,9 +3,9 @@
 import { Fragment } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { ArrowRight, ShieldCheck, Scale, Zap, Check, Crosshair, Gavel, Bot, Layers, Globe } from "lucide-react";
+import { ArrowRight, ShieldCheck, Scale, Zap, Check, Crosshair, Gavel, Bot, Layers, Globe, ListChecks, Lock, Landmark } from "lucide-react";
 import { SiteNav } from "@/components/site-nav";
-import { StandardsStrip } from "@/components/standards-strip";
+import { STANDARDS_CARDS, NON_AFFILIATION, type StandardKind } from "@/lib/standards";
 import { Button } from "@/components/ui/button";
 import { HeroConsole } from "@/components/landing/hero-console";
 import { Logomark } from "@/components/brand";
@@ -58,6 +58,13 @@ const PIPELINE = [
   { stage: "Judge", model: "gpt-5.4", note: "structured outputs" },
   { stage: "Verdict", model: "score · S$ exposure", note: "rubric-derived", accent: true },
 ];
+
+// Deep-red icon per standard for the "Built to a standard" section.
+const STANDARD_ICON: Record<StandardKind, typeof Globe> = {
+  owasp: ListChecks,
+  pdpa: Lock,
+  mas: Landmark,
+};
 
 const fadeUp = {
   hidden: { opacity: 0, y: 22 },
@@ -361,6 +368,46 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* ===================== BUILT TO A STANDARD ===================== */}
+      {/* Faint red-tinted band — distinct from the engine's neutral band — so */}
+      {/* the credibility section reads as its own deliberate block. Content is */}
+      {/* pulled from lib/standards.ts (single source of truth). */}
+      <section id="standards" className="scroll-mt-20 border-y border-border bg-[#FBF6F4] py-24">
+        <div className="container">
+          <SectionHeading
+            eyebrow="Built to a standard"
+            title="Graded against the standards your auditors already use."
+            sub="Every finding is mapped to a recognised framework — so a result isn't Redline's opinion, it's a citation."
+          />
+          <div className="mt-12 grid gap-5 md:grid-cols-3">
+            {STANDARDS_CARDS.map((c, i) => {
+              const Icon = STANDARD_ICON[c.kind];
+              return (
+                <Reveal key={c.kind} delay={i}>
+                  <div
+                    className={`panel h-full p-6 ${
+                      c.accent ? "border-redline/40 ring-1 ring-redline/25" : ""
+                    }`}
+                  >
+                    <div className="flex h-11 w-11 items-center justify-center rounded-full border border-redline/30 bg-redline/[0.06] text-redline">
+                      <Icon className="h-5 w-5" />
+                    </div>
+                    <h3 className="mt-4 font-display text-xl font-semibold">{c.title}</h3>
+                    <p className="mt-1 font-mono text-[11px] uppercase tracking-wider text-chalk-faint">
+                      {c.scope}
+                    </p>
+                    <p className="mt-3 text-sm leading-relaxed text-chalk-dim">{c.body}</p>
+                  </div>
+                </Reveal>
+              );
+            })}
+          </div>
+          <p className="mx-auto mt-6 max-w-2xl text-center text-xs leading-relaxed text-chalk-faint">
+            {NON_AFFILIATION}
+          </p>
+        </div>
+      </section>
+
       {/* ===================== ATTACK SUITE ===================== */}
       <Section id="attacks">
         <SectionHeading
@@ -389,9 +436,6 @@ export default function LandingPage() {
             );
           })}
         </div>
-        <Reveal delay={3}>
-          <StandardsStrip className="mt-8" />
-        </Reveal>
       </Section>
 
       {/* ===================== WHO IT'S FOR ===================== */}
@@ -490,6 +534,7 @@ function SiteFooter() {
               <ul className="space-y-2.5 text-chalk-dim">
                 <li><Link href="/#how" className="transition-colors hover:text-chalk">How it works</Link></li>
                 <li><Link href="/#engine" className="transition-colors hover:text-chalk">The engine</Link></li>
+                <li><Link href="/#standards" className="transition-colors hover:text-chalk">Standards</Link></li>
                 <li><Link href="/#attacks" className="transition-colors hover:text-chalk">Attack suite</Link></li>
                 <li><Link href="/watch" className="transition-colors hover:text-chalk">Watch</Link></li>
                 <li><Link href="/benchmark" className="transition-colors hover:text-chalk">Benchmark</Link></li>

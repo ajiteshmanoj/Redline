@@ -42,6 +42,12 @@ export function SiteNav() {
             How it works
           </Link>
           <Link
+            href="/#standards"
+            className="text-sm text-chalk-dim transition-colors hover:text-chalk"
+          >
+            Standards
+          </Link>
+          <Link
             href="/#attacks"
             className="text-sm text-chalk-dim transition-colors hover:text-chalk"
           >

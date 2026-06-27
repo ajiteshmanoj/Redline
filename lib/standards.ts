@@ -32,6 +32,39 @@ export const NON_AFFILIATION =
   "Indicative, category-level mapping — not a certification of compliance. Redline is independent and not affiliated with or endorsed by MAS, the PDPC, or OWASP.";
 
 export type StandardKind = "owasp" | "pdpa" | "mas";
+
+// Landing-page "Built to a standard" cards — the credibility section. Content
+// lives here (single source of truth) so the page renders it, never hardcodes.
+// `accent` marks PDPA: the most commercially important hook for an SG audience.
+export type StandardCard = {
+  kind: StandardKind;
+  title: string;
+  scope: string; // small mono scope label
+  body: string; // one plain-English line — what it is and why a finding maps to it
+  accent?: boolean;
+};
+
+export const STANDARDS_CARDS: StandardCard[] = [
+  {
+    kind: "owasp",
+    title: "OWASP LLM Top 10",
+    scope: "2025 · every LLM app",
+    body: "The industry catalogue of LLM risks. Every finding cites a specific entry — LLM01 prompt injection, LLM02 sensitive-information disclosure, and so on.",
+  },
+  {
+    kind: "pdpa",
+    title: "Singapore PDPA",
+    scope: "personal-data findings",
+    body: "Any leak of personal data is your reportable breach — penalties up to S$1M, or 10% of annual turnover, whichever is higher.",
+    accent: true,
+  },
+  {
+    kind: "mas",
+    title: "MAS AI Risk Guidelines",
+    scope: "proposed · financial only",
+    body: "Singapore's proposed supervisory expectations for AI in finance (13 Nov 2025 consultation paper). Applied to financial targets only.",
+  },
+];
 // `control` names the specific clause/entry; `why` is one line on why it applies
 // to this finding — surfaced when a reader hovers/expands the chip, so a
 // regulator-adjacent audience can see the mapping isn't hand-waving.
