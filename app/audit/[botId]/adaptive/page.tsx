@@ -9,5 +9,5 @@ export function generateStaticParams() {
 export default function AdaptiveRunPage({ params }: { params: { botId: string } }) {
   const bot = getBot(params.botId);
   if (!bot) notFound();
-  return <AdaptiveExperience botId={bot.id} title={bot.business} />;
+  return <AdaptiveExperience botId={bot.id} title={bot.business} financial={bot.financial} />;
 }

@@ -2,8 +2,9 @@
 
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { ArrowRight, ShieldCheck, Scale, Zap, Check } from "lucide-react";
+import { ArrowRight, ShieldCheck, Scale, Zap, Check, Crosshair, Gavel, Bot, Layers } from "lucide-react";
 import { SiteNav } from "@/components/site-nav";
+import { StandardsStrip } from "@/components/standards-strip";
 import { Button } from "@/components/ui/button";
 import { HeroConsole } from "@/components/landing/hero-console";
 import { Logomark } from "@/components/brand";
@@ -18,6 +19,27 @@ import { Interrogation } from "@/components/landing/interrogation";
 
 const GRADIENT_CTA =
   "bg-[linear-gradient(120deg,#E11534_0%,#C20E2E_55%,#8E0A21_100%)] shadow-[0_14px_34px_-12px_rgba(194,14,46,0.6)]";
+
+const ENGINE_ROLES = [
+  {
+    icon: Crosshair,
+    title: "The attacker",
+    role: "adversarial agent",
+    body: "Generates and escalates real attacks. In the multi-turn mode it profiles the target first, then pursues a goal over up to five turns — reading each reply and adapting.",
+  },
+  {
+    icon: Gavel,
+    title: "The judge",
+    role: "independent evaluator",
+    body: "A separate low-temperature call scores every response as strict JSON — broken, severity, reason. It never sees its own attacks, so the verdict isn't a model marking its own homework.",
+  },
+  {
+    icon: Bot,
+    title: "The target",
+    role: "bot under test",
+    body: "Your bot, or any external chatbot reached over HTTP as a black box. Redline drives it exactly as a real user would and judges the actual responses it gives.",
+  },
+];
 
 const fadeUp = {
   hidden: { opacity: 0, y: 22 },
@@ -225,6 +247,58 @@ export default function LandingPage() {
         </div>
       </Section>
 
+      {/* ===================== THE ENGINE ===================== */}
+      <Section id="engine">
+        <SectionHeading
+          eyebrow="The engine"
+          title="Three AIs, adversarial by design."
+          sub="Redline isn't one model talking to itself. An attacker, a separate judge, and the target each play a distinct role — that separation is what makes the verdict credible."
+        />
+        <div className="mt-12 grid gap-5 md:grid-cols-3">
+          {ENGINE_ROLES.map((r, i) => (
+            <Reveal key={r.title} delay={i}>
+              <div className="panel h-full p-6">
+                <div className="flex h-11 w-11 items-center justify-center rounded-full border border-redline/30 bg-redline/[0.06] text-redline">
+                  <r.icon className="h-5 w-5" />
+                </div>
+                <h3 className="mt-4 font-display text-lg font-semibold">{r.title}</h3>
+                <p className="mt-1 font-mono text-[11px] uppercase tracking-wider text-chalk-faint">
+                  {r.role}
+                </p>
+                <p className="mt-3 text-sm leading-relaxed text-chalk-dim">{r.body}</p>
+              </div>
+            </Reveal>
+          ))}
+        </div>
+        <Reveal delay={3}>
+          <div className="panel mt-5 flex flex-col gap-4 p-6 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-start gap-3">
+              <Layers className="mt-0.5 h-5 w-5 shrink-0 text-redline" />
+              <div>
+                <p className="font-display text-base font-semibold">Provider-agnostic by design.</p>
+                <p className="mt-1 max-w-2xl text-sm leading-relaxed text-chalk-dim">
+                  Every call flows through one abstraction. Default model is{" "}
+                  <span className="font-mono text-chalk">gpt-4o-mini</span>; point it at any
+                  OpenAI-compatible endpoint, and run a stronger attacker than judge with per-role
+                  models. The judge always runs as a <span className="text-chalk">separate
+                  low-temperature call</span> returning strict JSON — no model grades its own work.
+                </p>
+              </div>
+            </div>
+            <div className="flex shrink-0 flex-wrap gap-2">
+              {["attacker", "judge", "target"].map((m) => (
+                <span
+                  key={m}
+                  className="inline-flex items-center rounded-md border border-border bg-white/[0.02] px-2.5 py-1 font-mono text-[11px] uppercase tracking-wider text-chalk-dim"
+                >
+                  {m} model
+                </span>
+              ))}
+            </div>
+          </div>
+        </Reveal>
+      </Section>
+
       {/* ===================== ATTACK SUITE ===================== */}
       <Section id="attacks">
         <SectionHeading
@@ -253,6 +327,9 @@ export default function LandingPage() {
             );
           })}
         </div>
+        <Reveal delay={3}>
+          <StandardsStrip className="mt-8" />
+        </Reveal>
       </Section>
 
       {/* ===================== WHO IT'S FOR ===================== */}
@@ -350,17 +427,23 @@ function SiteFooter() {
               <p className="mono-label mb-3">Product</p>
               <ul className="space-y-2.5 text-chalk-dim">
                 <li><Link href="/#how" className="transition-colors hover:text-chalk">How it works</Link></li>
+                <li><Link href="/#engine" className="transition-colors hover:text-chalk">The engine</Link></li>
                 <li><Link href="/#attacks" className="transition-colors hover:text-chalk">Attack suite</Link></li>
+                <li><Link href="/watch" className="transition-colors hover:text-chalk">Watch</Link></li>
+                <li><Link href="/benchmark" className="transition-colors hover:text-chalk">Benchmark</Link></li>
                 <li><Link href="/audit" className="transition-colors hover:text-chalk">Run an audit</Link></li>
               </ul>
             </div>
             <div>
-              <p className="mono-label mb-3">Standards</p>
+              <p className="mono-label mb-3">Mapped to</p>
               <ul className="space-y-2.5 text-chalk-dim">
-                <li>OWASP LLM Top 10</li>
-                <li>MAS AI Risk Guidelines</li>
+                <li>OWASP LLM Top 10 (2025)</li>
                 <li>Singapore PDPA</li>
+                <li>MAS proposed AI Risk Guidelines</li>
               </ul>
+              <p className="mt-3 max-w-[12rem] text-[11px] leading-relaxed text-chalk-faint">
+                Indicative mapping. Not affiliated with or endorsed by these bodies.
+              </p>
             </div>
           </div>
         </div>

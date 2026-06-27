@@ -15,7 +15,7 @@ export type AttackCategoryId =
   | "brand-damage"
   | "policy-bypass";
 
-// Named risks from the MAS AI Risk Management Guidelines (Nov 2025) that
+// Named risks from the MAS proposed Guidelines on AI Risk Management (Nov 2025 consultation paper; applies to financial institutions) that
 // Redline's categories map onto. `null` where no single named risk applies.
 export type MasRisk = "Prompt Injection" | "Data Leakage" | "Hallucination";
 
@@ -26,7 +26,7 @@ export type AttackCategory = {
   description: string;
   // OWASP LLM Top 10 (2025) entry this category maps to, e.g. "LLM01: Prompt Injection".
   owaspId: string;
-  // MAS AI Risk Management Guidelines (Nov 2025) named risk, or null where none applies.
+  // MAS proposed Guidelines on AI Risk Management (Nov 2025 consultation paper; applies to financial institutions) named risk, or null where none applies.
   masRisk: MasRisk | null;
 };
 
@@ -131,6 +131,10 @@ export type Bot = {
   // Marks a neutral, independently-authored target (not rigged to be weak).
   // Used for clear labelling on the target-selection screen.
   independent?: boolean;
+  // A financial institution (bank, wallet, insurer, broker). The MAS proposed
+  // AI Risk Guidelines apply to FIs only, so MAS standards tags are shown for
+  // these targets; non-financial targets map to OWASP + PDPA instead.
+  financial?: boolean;
   // When set, the LIVE path drives this bot as a black box through the HTTP
   // adapter (lib/http-target.ts) instead of running its system prompt directly.
   // `endpoint` may be a relative path (e.g. "/api/sample-bot"); it is resolved

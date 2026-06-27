@@ -36,6 +36,16 @@ import { DisclosurePanel } from "./disclosure-panel";
 import { Button } from "./ui/button";
 import { SeverityMeter } from "./severity-meter";
 import { categoryMap } from "@/lib/attacks";
+import {
+  standardsFor,
+  pdpaApplies,
+  MAS_SHORT,
+  MAS_FULL,
+  OWASP_LABEL,
+  PDPA_LABEL,
+  NON_AFFILIATION,
+  type StandardKind,
+} from "@/lib/standards";
 import { categoryVisual } from "./category-meta";
 import { bandMeta } from "@/lib/utils";
 import { cn } from "@/lib/utils";
@@ -47,6 +57,7 @@ export function ReportView({
   onProve,
   endpoint,
   adaptiveBotId,
+  financial = false,
 }: {
   targetName: string;
   state: AuditState;
@@ -55,6 +66,8 @@ export function ReportView({
   endpoint?: string;
   // When set, shows a CTA to escalate this target with the multi-turn agent.
   adaptiveBotId?: string;
+  // Financial institution → MAS proposed guidelines are in scope (FIs only).
+  financial?: boolean;
 }) {
   const { summary, vulnerabilities, patches } = state;
   const [saved, setSaved] = useState(false);
@@ -196,7 +209,7 @@ export function ReportView({
       ) : null}
 
       {/* ---------- Regulatory context + standards mapping ---------- */}
-      <RegulatoryContext vulnerabilities={vulnerabilities} />
+      <RegulatoryContext vulnerabilities={vulnerabilities} financial={financial} />
 
       {/* ---------- Vulnerabilities ---------- */}
       <div>
@@ -218,7 +231,7 @@ export function ReportView({
         ) : (
           <div className="space-y-3">
             {vulnerabilities.map((v, i) => (
-              <VulnRow key={`${v.category}-${i}`} vuln={v} index={i} />
+              <VulnRow key={`${v.category}-${i}`} vuln={v} index={i} financial={financial} />
             ))}
           </div>
         )}
@@ -362,63 +375,95 @@ function CollapseStat({
   );
 }
 
-/** OWASP LLM Top 10 + MAS named-risk tags for a category. Always visible (prints). */
-function StandardsTags({ category }: { category: AuditState["vulnerabilities"][number]["category"] }) {
-  const meta = categoryMap[category];
+/**
+ * Standards tags for a finding: OWASP (always), PDPA (data-disclosure findings),
+ * MAS (financial targets only — the proposed guidelines apply to FIs). Visible
+ * in print. Colour-coded by framework so they're scannable.
+ */
+const STANDARD_TONE: Record<StandardKind, string> = {
+  owasp: "border-redline/30 bg-redline/[0.06] text-redline-bright",
+  pdpa: "border-amber-500/30 bg-amber-500/[0.08] text-amber-700",
+  mas: "border-border bg-white/[0.03] text-chalk-dim",
+};
+function StandardsTags({
+  category,
+  financial,
+}: {
+  category: AuditState["vulnerabilities"][number]["category"];
+  financial: boolean;
+}) {
   return (
     <>
-      <span className="inline-flex items-center rounded border border-redline/30 bg-redline/[0.06] px-1.5 py-0.5 font-mono text-[10px] font-medium uppercase tracking-wider text-redline-bright">
-        {meta.owaspId}
-      </span>
-      {meta.masRisk ? (
-        <span className="inline-flex items-center rounded border border-border bg-white/[0.03] px-1.5 py-0.5 font-mono text-[10px] uppercase tracking-wider text-chalk-dim">
-          MAS: {meta.masRisk}
+      {standardsFor(category, financial).map((t) => (
+        <span
+          key={t.kind}
+          className={cn(
+            "inline-flex items-center rounded border px-1.5 py-0.5 font-mono text-[10px] font-medium uppercase tracking-wider",
+            STANDARD_TONE[t.kind],
+          )}
+        >
+          {t.label}
         </span>
-      ) : null}
+      ))}
     </>
   );
 }
 
 /**
- * Regulatory context block (near the top of every report) plus the report-level
- * standards mapping. The paragraph copy is a PLACEHOLDER pending final wording.
+ * Regulatory context block + standards mapping. Scoping is deliberate and
+ * accurate: OWASP applies to every LLM app; PDPA to findings that disclose
+ * personal data; the MAS *proposed* guidelines (a Nov 2025 consultation paper)
+ * to financial institutions only.
  */
 function RegulatoryContext({
   vulnerabilities,
+  financial,
 }: {
   vulnerabilities: AuditState["vulnerabilities"];
+  financial: boolean;
 }) {
-  // Distinct OWASP entries and MAS-named risks across the confirmed breaks.
+  // Distinct OWASP entries across the confirmed breaks.
   const owasp = Array.from(
     new Set(vulnerabilities.map((v) => categoryMap[v.category].owaspId)),
   ).sort();
-  const mas = Array.from(
-    new Set(
-      vulnerabilities
-        .map((v) => categoryMap[v.category].masRisk)
-        .filter((m): m is NonNullable<typeof m> => Boolean(m)),
-    ),
-  ).sort();
+  // PDPA is observed when any data-disclosure finding landed.
+  const pdpaObserved = vulnerabilities.some((v) => pdpaApplies(v.category));
+  // MAS-named risks — only relevant for financial institutions.
+  const mas = financial
+    ? Array.from(
+        new Set(
+          vulnerabilities
+            .map((v) => categoryMap[v.category].masRisk)
+            .filter((m): m is NonNullable<typeof m> => Boolean(m)),
+        ),
+      ).sort()
+    : [];
 
   return (
     <div className="panel grain relative overflow-hidden p-6">
       <div className="absolute inset-0 -z-10 bg-[radial-gradient(620px_circle_at_15%_0%,rgba(255,59,59,0.06),transparent_60%)]" />
       <div className="mb-3 flex items-center gap-2">
         <Scale className="h-4 w-4 text-redline" />
-        <h2 className="font-display text-xl font-semibold">Regulatory context</h2>
+        <h2 className="font-display text-xl font-semibold">Standards &amp; regulatory context</h2>
       </div>
 
-      {/* PLACEHOLDER COPY — final wording to be supplied. */}
       <p className="max-w-3xl text-sm leading-relaxed text-chalk-dim">
-        Redline tests every target against the{" "}
-        <span className="text-chalk">OWASP LLM Top 10</span>, and maps each finding to the named
-        risks in the{" "}
-        <span className="text-chalk">
-          MAS AI Risk Management Guidelines (Nov 2025)
-        </span>
-        . This placeholder paragraph summarises the regulatory framing for the audit; final
-        wording will be supplied. The mappings below are provided to help compliance and security
-        teams triage findings against the controls they already report on.
+        Every finding is mapped to the <span className="text-chalk">{OWASP_LABEL}</span>, the
+        vendor-neutral framework for LLM application security. Findings that disclose personal data
+        are flagged against Singapore&apos;s <span className="text-chalk">PDPA</span>.{" "}
+        {financial ? (
+          <>
+            As a financial institution, this target is also mapped to the{" "}
+            <span className="text-chalk">{MAS_FULL}</span> — note this is a{" "}
+            <span className="text-chalk">proposed</span> guideline out for consultation, not yet in
+            force.
+          </>
+        ) : (
+          <>
+            The <span className="text-chalk">{MAS_SHORT}</span> apply to financial institutions only,
+            so they are not mapped for this target.
+          </>
+        )}
       </p>
 
       <div className="mt-5 grid gap-4 sm:grid-cols-2">
@@ -434,6 +479,11 @@ function RegulatoryContext({
                   {id}
                 </span>
               ))}
+              {pdpaObserved ? (
+                <span className="inline-flex items-center rounded border border-amber-500/30 bg-amber-500/[0.08] px-2 py-0.5 font-mono text-[11px] text-amber-700">
+                  {PDPA_LABEL}: personal data disclosed
+                </span>
+              ) : null}
             </div>
           ) : (
             <p className="text-sm text-chalk-faint">
@@ -442,8 +492,14 @@ function RegulatoryContext({
           )}
         </div>
         <div className="rounded-md border border-border bg-white/[0.02] p-4">
-          <p className="mono-label mb-2.5">MAS-named risks — observed</p>
-          {mas.length > 0 ? (
+          <p className="mono-label mb-2.5">
+            {financial ? "MAS-named risks — observed" : "MAS — scope"}
+          </p>
+          {!financial ? (
+            <p className="text-sm text-chalk-faint">
+              Not a financial institution — the {MAS_SHORT} are out of scope for this target.
+            </p>
+          ) : mas.length > 0 ? (
             <div className="flex flex-wrap gap-1.5">
               {mas.map((m) => (
                 <span
@@ -461,10 +517,7 @@ function RegulatoryContext({
           )}
         </div>
       </div>
-      <p className="mt-4 text-xs leading-relaxed text-chalk-faint">
-        Risk names map to those used in the MAS AI Risk Management Guidelines (Nov 2025). Mapping is
-        indicative and category-level, not a certification of compliance.
-      </p>
+      <p className="mt-4 text-xs leading-relaxed text-chalk-faint">{NON_AFFILIATION}</p>
     </div>
   );
 }
@@ -562,9 +615,11 @@ function ScoreChip({
 function VulnRow({
   vuln,
   index,
+  financial,
 }: {
   vuln: AuditState["vulnerabilities"][number];
   index: number;
+  financial: boolean;
 }) {
   const [open, setOpen] = useState(index === 0);
   const Icon = categoryVisual[vuln.category].icon;
@@ -592,7 +647,7 @@ function VulnRow({
             <span className="font-mono text-[11px] uppercase tracking-wider text-chalk-faint">
               {categoryMap[vuln.category].label}
             </span>
-            <StandardsTags category={vuln.category} />
+            <StandardsTags category={vuln.category} financial={financial} />
           </div>
         </div>
         <ChevronDown

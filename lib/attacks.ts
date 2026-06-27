@@ -18,7 +18,7 @@ import { VERDICT_SCHEMA } from "./judge-schema";
 // ===========================================================================
 
 // Each category is mapped to the OWASP LLM Top 10 (2025) and, where one applies,
-// a named risk from the MAS AI Risk Management Guidelines (Nov 2025). This is
+// a named risk from the MAS proposed Guidelines on AI Risk Management (Nov 2025 consultation paper; applies to financial institutions). This is
 // metadata for the report only — the attack prompts themselves are untouched.
 export const CATEGORIES: AttackCategory[] = [
   {

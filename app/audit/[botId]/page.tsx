@@ -15,6 +15,7 @@ export default function AuditRunPage({ params }: { params: { botId: string } }) 
       title={bot.business}
       subtitle={bot.name}
       allowProve
+      financial={bot.financial}
     />
   );
 }

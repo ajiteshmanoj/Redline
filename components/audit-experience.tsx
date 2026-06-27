@@ -20,11 +20,14 @@ export function AuditExperience({
   title,
   subtitle,
   allowProve = false,
+  financial = false,
 }: {
   run: AuditRunConfig;
   title: string;
   subtitle?: string;
   allowProve?: boolean;
+  // Financial institution → MAS proposed guidelines are in scope.
+  financial?: boolean;
 }) {
   const { state, start } = useAudit(run);
   const [view, setView] = useState<View>("console");
@@ -111,6 +114,7 @@ export function AuditExperience({
                 onProve={allowProve ? proveTheFix : undefined}
                 endpoint={run.target?.endpoint}
                 adaptiveBotId={run.botId}
+                financial={financial}
               />
             </motion.div>
           ) : (
